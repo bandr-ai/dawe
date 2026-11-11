@@ -1,0 +1,3 @@
+extends = "v1"
+description = "Output format change only: XML tool_call blocks instead of JSON."
+call_format = "xml"

@@ -1,0 +1,4 @@
+extends = "v1"
+description = "Prompt change only: new system prompt wording, tools moved into the user message."
+tools_in = "user"
+system_prompt = "You operate a tool runtime. Decide which tools to invoke for the request and with what arguments. Do not explain.\n{tools}\n{format}"

@@ -1,0 +1,4 @@
+extends = "v1"
+description = "Opaque tools: tool names become per-item IDs (t_3f9a) and argument names become a1, a2, ...; only the descriptions say what they mean. A shim can't map them back without understanding the descriptions."
+tool_case = "opaque"
+arg_case = "opaque"

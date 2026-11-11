@@ -1,0 +1,3 @@
+extends = "v1"
+description = "C. Positional arguments: [area(10, 5)]; the model must know the declared argument order."
+call_format = "pypos"

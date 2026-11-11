@@ -1,0 +1,4 @@
+extends = "v1"
+description = "Tool rename only: math.factorial -> tool_math_factorial."
+tool_prefix = "tool_"
+tool_dots = "_"

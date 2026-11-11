@@ -1,0 +1,117 @@
+{
+ "name": "eos6",
+ "scores": {
+  "v1": {
+   "accuracy": 0.9949579831932773,
+   "n": 595,
+   "format_fail": 0.0,
+   "by_category": {
+    "simple": 0.9932,
+    "multiple": 1.0,
+    "parallel": 0.9934
+   }
+  },
+  "v4_format": {
+   "accuracy": 0.934453781512605,
+   "n": 595,
+   "format_fail": 0.0,
+   "by_category": {
+    "simple": 0.9349,
+    "multiple": 0.9536,
+    "parallel": 0.9145
+   }
+  }
+ },
+ "n_fail_target": 39,
+ "fail_examples": [
+  {
+   "id": "simple_77",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<tool_call name=\"restaurant.find_nearby\">\n<arg name=\"location\">Los Angeles</arg>\n<arg name=\"dietary_preference\">[\"Vegan\"]</arg>\n</tool_call>"
+  },
+  {
+   "id": "simple_83",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<tool_call name=\"calculate_distance\">\n<arg name=\"coord1\">(33.4484, -112.0740)</arg>\n<arg name=\"coord2\">(34.0522, -118.2437)</arg>\n<arg name=\"unit\">miles</arg>\n</tool_call>"
+  },
+  {
+   "id": "simple_163",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<tool_call name=\"property_records.get\">\n<arg name=\"address\">123 main street</arg>\n<arg name=\"parcel_number\">1234567890</arg>\n<arg name=\"county\">Santa Clara</arg>\n<arg name=\"include_owner\">true</arg>\n</tool_call>"
+  },
+  {
+   "id": "simple_169",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<tool_call name=\"court_case.search\">\n<arg name=\"docket_number\">123456</arg>\n<arg name=\"location\">Texas</arg>\n<arg name=\"full_text\">false</arg>\n</tool_call>"
+  },
+  {
+   "id": "simple_172",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<tool_call name=\"legal_case.fetch\">\n<arg name=\"case_id\">R vs Adams</arg>\n<arg name=\"details\">True</arg>\n</tool_call>"
+  },
+  {
+   "id": "simple_181",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<tool_call name=\"get_lawsuit_details\">\n<arg name=\"case_number\">123456-ABC</arg>\n<arg name=\"court_location\">Los Angeles</arg>\n<arg name=\"with_verdict\">True</arg>\n</tool_call>"
+  },
+  {
+   "id": "simple_218",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<tool_call name=\"patient.get_mri_report\">\n<arg name=\"patient_id\">546382</arg>\n<arg name=\"mri_type\">brain</arg>\n<arg name=\"status\">concluded</arg>\n</tool_call>"
+  },
+  {
+   "id": "simple_263",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<tool_call name=\"get_sculpture_info\">\n<arg name=\"artist_name\">James Plensa</arg>\n<arg name=\"detail\">True</arg>\n</tool_call>"
+  },
+  {
+   "id": "simple_303",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<tool_call name=\"soccer_stat.get_player_stats\">\n<arg name=\"player_name\">Cristiano Ronaldo</arg>\n<arg name=\"season\">2019-2020</arg>\n<arg name=\"league\">all</arg>\n</tool_call>"
+  },
+  {
+   "id": "simple_307",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<tool_call name=\"game_result.get_winner\">\n<arg name=\"teams\">[\"Lakers\", \"Clippers\"]</arg>\n<arg name=\"date\">2021-01-28</arg>\n<arg name=\"venue\">home</arg>\n</tool_call>"
+  },
+  {
+   "id": "simple_309",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<tool_call name=\"nfl_data.player_record\">\n<arg name=\"player_name\">Tom Brady</arg>\n<arg name=\"season_year\">2020</arg>\n<arg name=\"team\">all</arg>\n</tool_call>"
+  },
+  {
+   "id": "simple_310",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<tool_call name=\"get_career_stats\">\n<arg name=\"player_name\">LeBron James</arg>\n<arg name=\"team\">all</arg>\n</tool_call>"
+  }
+ ],
+ "ledger": {
+  "tries": "2/25",
+  "runs": "4/120",
+  "gpu_usd": "0.49/12.0"
+ }
+}

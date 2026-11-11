@@ -1,0 +1,3 @@
+extends = "v1"
+description = "D. Plan first: one <plan>...</plan> line before the JSON calls, or the reply is rejected."
+require_plan = true

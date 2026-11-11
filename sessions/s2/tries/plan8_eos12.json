@@ -1,0 +1,117 @@
+{
+ "name": "plan8_eos12",
+ "scores": {
+  "v1": {
+   "accuracy": 0.9949579831932773,
+   "n": 595,
+   "format_fail": 0.0,
+   "by_category": {
+    "simple": 0.9932,
+    "multiple": 1.0,
+    "parallel": 0.9934
+   }
+  },
+  "v11_plan": {
+   "accuracy": 0.9781512605042016,
+   "n": 595,
+   "format_fail": 0.0,
+   "by_category": {
+    "simple": 0.9795,
+    "multiple": 0.9801,
+    "parallel": 0.9737
+   }
+  }
+ },
+ "n_fail_target": 13,
+ "fail_examples": [
+  {
+   "id": "simple_77",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<plan>Use the restaurant.find_nearby function to locate vegan restaurants in Los Angeles based on the user's dietary preference.</plan>\n\n{\"tool_calls\": [{\"name\": \"restaurant.find_nearby\", \"arguments\": {\"location\": \"Los Angeles\", \"dietary_preference\": [\"Vegan\"]}}]}"
+  },
+  {
+   "id": "simple_214",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<plan>Use the event_finder.find_upcoming function to search for rock concerts in New York City for the next 30 days.</plan>\n\n{\"tool_calls\": [{\"name\": \"event_finder.find_upcoming\", \"arguments\": {\"location\": \"New York City, NY\", \"genre\": \"Rock\", \"days_ahead\": 30}}]}"
+  },
+  {
+   "id": "simple_307",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<plan>Call game_result.get_winner with teams [\"Lakers\", \"Clippers\"], date \"2021-01-28\", and venue \"home\" to determine the winner of the game.</plan>\n\n{\"tool_calls\": [{\"name\": \"game_result.get_winner\", \"arguments\": {\"teams\": [\"Lakers\", \"Clippers\"], \"date\": \"2021-01-28\", \"venue\": \"home\"}}]}"
+  },
+  {
+   "id": "simple_353",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<plan>\nI will call the find_recipes function with the dietary restriction set to 'gluten-free', the meal type set to 'dinner', and leave the ingredients parameter blank to return general recipes.\n</plan>\n\n{\"tool_calls\": [{\"name\": \"find_recipes\", \"arguments\": {\"diet\": \"gluten-free\", \"meal_type\": \"dinner\", \"ingredients\": []}}]}"
+  },
+  {
+   "id": "simple_375",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<plan>Call the walmart.check_price function with items [\"pumpkins\", \"eggs\"] and quantities [3, 24] to calculate the total price at Walmart.</plan>\n\n{\"tool_calls\": [{\"name\": \"walmart.check_price\", \"arguments\": {\"items\": [\"pumpkins\", \"eggs\"], \"quantities\": [3, 24], \"store_location\": \"all\"}}]}"
+  },
+  {
+   "id": "simple_394",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<plan>Call the maps.get_distance_duration function to retrieve the travel distance and estimated travel time from the Eiffel Tower to the Louvre Museum, with traffic considered.</plan>\n\n{\"tool_calls\": [{\"name\": \"maps.get_distance_duration\", \"arguments\": {\"start_location\": \"Eiffel Tower\", \"end_location\": \"Louvre Museum\", \"traffic\": true}}]}"
+  },
+  {
+   "id": "multiple_76",
+   "category": "multiple",
+   "n_gold_calls": 1,
+   "got_calls": 0,
+   "text": "<plan>\nThe user is asking about available material options for a custom sculpture. Based on the function schema for `sculpture.create_custom`, the available materials are: Bronze, Marble, Terracotta, Wood, and Stone. I will provide this information directly without calling any function, as the user is asking for information, not placing an order.\n</plan>\n\n{\"tool_calls\": []}"
+  },
+  {
+   "id": "multiple_131",
+   "category": "multiple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<plan>Call the market_performance.get_data function to retrieve the market performance data for the S&P 500 and Dow Jones over the past 5 days with detailed information.</plan>\n\n{\"tool_calls\": [{\"name\": \"market_performance.get_data\", \"arguments\": {\"indexes\": [\"S&P 500\", \"Dow Jones\"], \"days\": 5, \"detailed\": true}}]}"
+  },
+  {
+   "id": "multiple_193",
+   "category": "multiple",
+   "n_gold_calls": 1,
+   "got_calls": 1,
+   "text": "<plan>Use the maps.get_distance_duration function to retrieve the travel distance and estimated travel time from the Eiffel Tower to the Louvre Museum via car, with traffic considered.</plan>\n\n{\"tool_calls\": [{\"name\": \"maps.get_distance_duration\", \"arguments\": {\"start_location\": \"Eiffel Tower\", \"end_location\": \"Louvre Museum\", \"traffic\": true}}]}"
+  },
+  {
+   "id": "parallel_94",
+   "category": "parallel",
+   "n_gold_calls": 2,
+   "got_calls": 2,
+   "text": "<plan>\nI will call the 'calculate_electric_field' function twice: once for the 5 coulomb charge at 2 meters, and once for the 3 coulomb charge at 4 meters, both with a permitivity of 1 (representing vacuum).\n</plan>\n\n{\"tool_calls\": [{\"name\": \"calculate_electric_field\", \"arguments\": {\"charge\": 5, \"distance\": 2, \"permitivity\": 1}}, {\"name\": \"calculate_electric_field\", \"arguments\": {\"charge\": 3, \"distance\": 4, \"permitivity\": 1}}]}"
+  },
+  {
+   "id": "parallel_124",
+   "category": "parallel",
+   "n_gold_calls": 4,
+   "got_calls": 2,
+   "text": "<plan>\nI will call the population_projections function twice for Japan with 10 years and 1.5% growth rate, and twice for India with 20 years and 2.1% growth rate. This will give me the projected population growth for both countries under the specified conditions.\n</plan>\n\n{\"tool_calls\": [{\"name\": \"population_projections\", \"arguments\": {\"country\": \"Japan\", \"years\": 10, \"growth_rate\": 0.015}}, {\"name\": \"population_projections\", \"arguments\": {\"country\": \"India\", \"years\": 20, \"growth_rate\": 0.021}}]}"
+  },
+  {
+   "id": "parallel_130",
+   "category": "parallel",
+   "n_gold_calls": 2,
+   "got_calls": 2,
+   "text": "<plan>\nI will call the find_restaurants function twice: once for New York City with Italian food, vegan, and gluten-free dietary requirements for 4 results, and once for Los Angeles with the same parameters for 4 results.\n</plan>\n\n{\"tool_calls\": [{\"name\": \"find_restaurants\", \"arguments\": {\"location\": \"New York City\", \"food_type\": \"Italian\", \"number\": 4, \"dietary_requirements\": [\"vegan\", \"gluten-free\"]}}, {\"name\": \"find_restaurants\", \"arguments\": {\"location\": \"Los Angeles\", \"food_type\": \"Italian\", \"number\": 4, \"dietary_requirements\": [\"vegan\", \"gluten-free\"]}}]}"
+  }
+ ],
+ "ledger": {
+  "tries": "2/25",
+  "runs": "5/120",
+  "gpu_usd": "0.63/5.0"
+ }
+}

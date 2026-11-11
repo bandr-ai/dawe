@@ -1,0 +1,16 @@
+[project]
+name = "geodesic"
+version = "0.0.1"
+description = "Edit model weights instead of retraining. First use: fix a fine-tuned model after a harness change."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+geodesic = "geodesic.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

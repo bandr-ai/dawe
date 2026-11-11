@@ -1,0 +1,36 @@
+== map_v1__v4_format.json  (595 pairs, model sft_v1)
+
+Surprise at 'another call follows' (avg -log p of the next gold token; higher = more surprised)
+  v1         continue 0.001   stop 0.000   (points: 260 continue, 595 stop)
+  v4_format  continue 0.975   stop 0.000   (points: 260 continue, 595 stop)
+
+Gradient size: total |grad| on v1 replies = 38.588, on v4_format replies = 16736.463
+  top  1 of 249 matrices hold  20.2% of the v4_format gradient
+  top  5 of 249 matrices hold  27.5% of the v4_format gradient
+  top 10 of 249 matrices hold  34.3% of the v4_format gradient
+  top 25 of 249 matrices hold  50.7% of the v4_format gradient
+  top matrices for v4_format:
+    layer  0 out_proj        20.2%   (vs v1:  7.6%)
+    layer -1 model.language_model.embed_tokens.weight   2.4%   (vs v1:  5.2%)
+    layer  2 down_proj        1.7%   (vs v1:  0.8%)
+    layer  6 up_proj          1.6%   (vs v1:  1.0%)
+    layer  0 down_proj        1.5%   (vs v1:  0.4%)
+    layer  3 down_proj        1.4%   (vs v1:  0.7%)
+    layer  1 in_proj_qkv      1.4%   (vs v1:  0.6%)
+    layer  4 up_proj          1.4%   (vs v1:  0.7%)
+    layer  5 up_proj          1.4%   (vs v1:  0.8%)
+    layer  4 down_proj        1.3%   (vs v1:  0.6%)
+  v4_format gradient by layer (%): 0:24 1:6 2:6 3:6 4:5 5:5 6:5 7:5 8:3 9:2 10:2 11:3 12:2 13:2 14:2 15:3 16:2 17:2 18:3 19:3 20:2 21:1 22:1 23:1 24:0 25:0 26:0 27:0 28:0 29:0 30:0 31:1
+  v4_format gradient by kind (%):  out_proj 26, down_proj 20, up_proj 19, gate_proj 11, in_proj_qkv 7, o_proj 5, in_proj_z 4, v_proj 3, model.language_model.embed_tokens.weight 2, q_proj 1, k_proj 0, in_proj_b 0, in_proj_a 0
+
+Continue-vs-stop signal in hidden states, per layer (held-out accuracy; cosine of the two directions)
+  layer       v1 acc    v4_format acc  cos(dir)
+      0         0.99             0.70      0.00
+      4         1.00             0.64      0.15
+      8         0.99             0.64      0.09
+     12         0.99             0.64      0.29
+     16         1.00             0.95      0.53
+     20         1.00             0.99      0.54
+     24         1.00             0.99      0.37
+     28         1.00             0.99      0.28
+     32         1.00             0.99      0.17

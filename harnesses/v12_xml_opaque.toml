@@ -1,0 +1,4 @@
+extends = "v4_format"
+description = "E. v4 XML calls plus v7 opaque tool and argument names."
+tool_case = "opaque"
+arg_case = "opaque"

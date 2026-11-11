@@ -1,0 +1,5 @@
+extends = "v1"
+description = "A. Qwen3.5 native tool calling: the tools block and call format the model's own chat template uses (<tool_call><function=...><parameter=...>)."
+schema_style = "qwen"
+call_format = "qwen"
+system_prompt = "{tools}\n\n{format}\n\nYou are a helpful assistant that can call functions."

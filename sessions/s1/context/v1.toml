@@ -1,0 +1,6 @@
+# Baseline harness. The SFT model is trained on this one.
+description = "JSON schema in the system prompt, JSON tool_calls output, BFCL names as-is."
+schema_style = "json"
+call_format = "json"
+tools_in = "system"
+system_prompt = "You are a helpful assistant that can call functions.\n\n{tools}\n\n{format}"

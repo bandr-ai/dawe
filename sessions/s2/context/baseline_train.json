@@ -1,0 +1,117 @@
+{
+ "name": "baseline",
+ "scores": {
+  "v1": {
+   "accuracy": 0.9949579831932773,
+   "n": 595,
+   "format_fail": 0.0,
+   "by_category": {
+    "simple": 0.9932,
+    "multiple": 1.0,
+    "parallel": 0.9934
+   }
+  },
+  "v11_plan": {
+   "accuracy": 0.18319327731092436,
+   "n": 595,
+   "format_fail": 0.8100840336134454,
+   "by_category": {
+    "simple": 0.161,
+    "multiple": 0.1722,
+    "parallel": 0.2368
+   }
+  }
+ },
+ "n_fail_target": 486,
+ "fail_examples": [
+  {
+   "id": "simple_0",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": null,
+   "text": "<plan>Call the calculate_triangle_area function with base=10, height=5, and unit='units' to compute the area.</plan>"
+  },
+  {
+   "id": "simple_1",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": null,
+   "text": "{\"tool_calls\": [{\"name\": \"math.factorial\", \"arguments\": {\"number\": 5}}]}"
+  },
+  {
+   "id": "simple_2",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": null,
+   "text": "{\"tool_calls\": [{\"name\": \"math.hypot\", \"arguments\": {\"x\": 4, \"y\": 5, \"z\": 0}}]}"
+  },
+  {
+   "id": "simple_3",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": null,
+   "text": "<plan>Call the algebra.quadratic_roots function with a=1, b=-3, c=2 to find the roots of the quadratic equation x\u00b2 - 3x + 2 = 0.</plan>"
+  },
+  {
+   "id": "simple_4",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": null,
+   "text": "<plan>Call the solve_quadratic_equation function with a=2, b=6, and c=5 to find the roots of the quadratic equation 2x\u00b2 + 6x + 5 = 0.</plan>"
+  },
+  {
+   "id": "simple_5",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": null,
+   "text": "<plan>Call the solve_quadratic function with a=3, b=-11, c=-4, and root_type='all' to find both real and complex roots.</plan>"
+  },
+  {
+   "id": "simple_6",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": null,
+   "text": "<plan>Call the solve_quadratic function with a=2, b=5, and c=3 to find the roots of the quadratic equation 2x\u00b2 + 5x + 3 = 0.</plan>"
+  },
+  {
+   "id": "simple_7",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": null,
+   "text": "{\"tool_calls\": [{\"name\": \"calculate_circumference\", \"arguments\": {\"radius\": 4, \"unit\": \"inches\"}}]}"
+  },
+  {
+   "id": "simple_8",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": null,
+   "text": "<plan>Calculate the area of a circle with a radius of 10 meters using the geometry.area_circle function.</plan>"
+  },
+  {
+   "id": "simple_9",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": null,
+   "text": "{\"tool_calls\": [{\"name\": \"geometry.calculate_area_circle\", \"arguments\": {\"radius\": 5, \"unit\": \"units\"}}]}"
+  },
+  {
+   "id": "simple_10",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": null,
+   "text": "<plan>Call the calculate_area function with base=6, height=10, and unit='cm' to compute the area of the right-angled triangle.</plan>"
+  },
+  {
+   "id": "simple_12",
+   "category": "simple",
+   "n_gold_calls": 1,
+   "got_calls": null,
+   "text": "{\"tool_calls\": [{\"name\": \"geometry.circumference\", \"arguments\": {\"radius\": 3, \"units\": \"cm\"}}]}"
+  }
+ ],
+ "ledger": {
+  "tries": "0/25",
+  "runs": "0/120",
+  "gpu_usd": "0.24/12.0"
+ }
+}

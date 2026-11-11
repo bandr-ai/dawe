@@ -1,0 +1,4 @@
+extends = "v1"
+description = "Schema change only: camelCase argument names, tools shown as signatures instead of JSON schema."
+arg_case = "camel"
+schema_style = "signature"
