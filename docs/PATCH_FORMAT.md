@@ -16,14 +16,14 @@ the old and new values:
 4 bytes index + 2 bytes old + 2 bytes new  =  8 bytes per changed bf16 weight, plus about 3.5 KB of manifest
 ```
 
-| Edit | Changed weights | Estimated `.gpatch` size |
-|---|---|---|
-| s1 `eos12` (one row) | 2,557 | about 24 KB |
-| s2 `plan8_eos12` (two rows) | 5,064 | about 44 KB |
+| Edit | Changed weights | `.gpatch` size | Whole changed tensor |
+|---|---|---|---|
+| s1 `eos12` (one row, `<|im_end|>`) | 2,557 | **23,632 bytes** | 1,271,398,400 bytes |
+| s2 `plan8_eos12` (rows `<` and `<|im_end|>`) | 5,064 | **43,688 bytes** | 1,271,398,400 bytes |
 
-These are estimates from the format. A synthetic edit of two full rows of a 248,320 × 2,560 bf16 tensor
-(5,120 weights) measured 42.5 KB and took 1.1 s to create, 1.8 s to apply and 1.6 s to restore. Real sizes
-for the released patches are in `release/patches/` once exported (see `release/README.md`).
+Measured on the exported files in `release/patches/`: the tensor is `model.language_model.embed_tokens.weight`,
+BF16 `[248320, 2560]`, 635,699,200 weights. A patch is between 1/29,000 and 1/54,000 of the tensor it edits. On a synthetic edit
+of the same shape, create, apply and restore took 1.1 s, 1.8 s and 1.6 s.
 
 ## File layout
 

@@ -37,8 +37,8 @@ simplified answer checker; it is not BFCL's official scorer and does not reuse i
 | modal | client, unpinned | launching GPU jobs | Apache-2.0 (the Modal service has its own terms of service) | yes |
 
 None of these are bundled into a release of this repository. Transitive dependencies of the GPU images are
-resolved when the images are built; their licenses have **not** been audited. `modal run gpu/app.py::freeze`
-records them in `repro/` (see [REPRODUCE.md](REPRODUCE.md#exact-environment)); audit that list if you
+resolved when the images are built; their licenses have **not** been audited. `repro/freeze_*.txt`
+lists them (see [REPRODUCE.md](REPRODUCE.md#exact-environment)); audit that list if you
 redistribute a container image.
 
 ## 3. Model terms (separate from the code license)

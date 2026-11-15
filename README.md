@@ -58,8 +58,9 @@ geodesic patch apply   x.gpatch --source CHECKPOINT --out NEW_DIR
 geodesic patch restore x.gpatch --patched NEW_DIR   --out ORIGINAL_DIR
 ```
 
-Standard library only; the patch tools do not import torch. The released `.gpatch` files are not exported yet
-([release/README.md](release/README.md)).
+Standard library only; the patch tools do not import torch. The two released patches (23.6 KB and 43.7 KB) are in
+[`release/patches/`](release/patches/) with their SHA-256 in [release/README.md](release/README.md); the checkpoint they apply
+to is not published (see [docs/LICENSES.md](docs/LICENSES.md)).
 
 ## Layout
 

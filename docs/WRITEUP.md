@@ -81,14 +81,16 @@ reading is small on these prompts; we did not isolate it (for example by patchin
 ## Size and portability
 
 The lab originally saved the whole edited tensor, which for these edits is a file of over 1.2 GB. Patches are now sparse
-(changed indices plus old and new values, bound to the exact checkpoint by content hashes), about 24 KB and 44 KB for the two
-edits ([PATCH_FORMAT.md](PATCH_FORMAT.md); sizes estimated from the format, to be confirmed on the exported files).
+(changed indices plus old and new values, bound to the exact checkpoint by content hashes): 23,632 bytes for the s1 edit and
+43,688 bytes for the s2 edit ([PATCH_FORMAT.md](PATCH_FORMAT.md), files in [`release/patches/`](../release/patches/)).
 A patch applies only to the exact `sft_v1` checkpoint it was made from, can be undone byte for byte, and refuses a
 look-alike, including the plain base model (whose embedding rows are identical to `sft_v1`'s).
 
-Cost: the agents' lab ledgers show $0.79 (s1) and $0.63 (s2) of GPU. That is the agent's own usage only. SFT, map
-jobs and held-out evaluations are extra; their total was not committed (`runs/costs.jsonl`), so we do not state a
-total cost.
+Cost: the agents' lab ledgers show $0.79 (s1) and $0.63 (s2) of GPU. That is the agent's own usage only. The maintainers'
+running total for the whole project (SFT, maps, ceilings, agent lab, control and held-out scoring) was about **$5.30**
+when the s1 results were written up, of which the random control and the two test-set scorings were about $0.27. That figure
+predates the s2 session, so s2's $0.63 and its evaluations come on top, and it excludes the agent's own model usage
+(Codex on a ChatGPT plan). The itemized log (`runs/costs.jsonl`) was not committed, so there is no exact final total.
 
 ## Limitations
 
@@ -118,12 +120,15 @@ total cost.
    code), not accuracy.
 8. **Agent sessions are not independent.** s2 started from s1's patch and notes. Each task was attempted once.
 9. **Cooperative lab.** Budget and data rules are guard rails, not isolation ([LAB.md](LAB.md)).
-10. **The patch artifacts are not released yet.** The two patches exist as whole-tensor files on the Modal volume; exporting them
-    to `release/patches/` needs access to that volume ([release/README.md](../release/README.md)). Raw held-out predictions are
-    likewise not in the repository, so the tables in `RESULTS.md` cannot yet be regenerated from committed files.
-11. **Environment.** Top-level package versions, the model revision and the dataset revision are pinned. Transitive packages and
-    the Modal base image are not recorded yet (`modal run gpu/app.py::freeze`), and GPU training and vLLM generation are not
-    guaranteed bit-reproducible.
+10. **The reported accuracies belong to the original whole-tensor patches.** The released sparse `.gpatch` files were converted from
+    those (the converter checks that exactly 2,557 and 5,064 weights change, matching what the lab recorded) and verified against the
+    real checkpoint ([release/README.md](../release/README.md)), but the held-out evaluation was not re-run on a model produced by
+    `geodesic patch apply`. Raw held-out predictions are not in the repository either, so the tables in `RESULTS.md` cannot yet be
+    regenerated from committed files; they match the maintainers' own earlier write-ups of the same runs.
+11. **Environment.** Top-level package versions, the model revision and the dataset revision are pinned, and `repro/freeze_*.txt`
+    lists the resolved versions of all three images as built on 2026-11-16 (not necessarily as of the original runs; the generation image
+    uses `transformers` 5.17.0 while training used 5.20.2). The Modal base image is not pinned by digest, and GPU training and vLLM
+    generation are not guaranteed bit-reproducible.
 
 ## What the data supports
 

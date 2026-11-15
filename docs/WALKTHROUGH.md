@@ -121,18 +121,18 @@ def edit(model, ctx):
 Read it as: "make the logit of end-of-turn about 12 lower when the hidden state looks like `v4`-continue, and leave it
 alone at `v4`-stop and at every `v1` decision." No optimizer, no training loop.
 
-What gets saved is a sparse patch (`release/README.md` for the export status; the toy demo above shows the same thing):
+What gets saved is a sparse patch (`release/patches/s1_eos12.gpatch`; the toy demo above shows the same thing on a small model):
 
 ```bash
 geodesic patch inspect release/patches/s1_eos12.gpatch
-#   file size      about 24 KB (whole changed tensors would be over 1.2 GB)
+#   file size      23,632 bytes  (whole changed tensors would be 1,271,398,400)
 #   weights changed 2,557
-#   model.language_model.embed_tokens.weight  BF16[...]: 2,557 of ...  rows [248046]
+#   model.language_model.embed_tokens.weight  BF16[248320, 2560]: 2,557 of 635,699,200  rows [248046]
 geodesic patch apply   release/patches/s1_eos12.gpatch --source sft_v1/merged --out sft_v1_xml
-geodesic patch restore release/patches/s1_eos12.gpatch --patched sft_v1_xml  --out sft_v1_back   # == sft_v1/merged
+geodesic patch restore release/patches/s1_eos12.gpatch --patched sft_v1_xml  --out sft_v1_back   # == sft_v1/merged, byte for byte
 ```
 
-(`rows [248046]` is `<|im_end|>`, from the agents' notes: token 248046.) Applying to anything other than the
+(`rows [248046]` is `<|im_end|>`.) Applying to anything other than the
 exact `sft_v1` checkpoint is refused, including the plain base model ([PATCH_FORMAT.md](PATCH_FORMAT.md)).
 
 ## 5. Held-out evaluation

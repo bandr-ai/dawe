@@ -8,8 +8,8 @@ Three levels, from free to expensive. Do them in order; each tells you whether t
 | B. Re-derive | Modal account, an H100 | about an hour, a few dollars | baseline model, the failure, the map, a patch, held-out numbers |
 | C. Apply our patches | the exact `sft_v1` checkpoint + `release/patches/*.gpatch` | minutes | that the shipped patches reproduce our numbers |
 
-Level C is blocked on two things the repository does not contain yet: the exported patches and the checkpoint
-(see [release/README.md](../release/README.md) and [LICENSES.md](LICENSES.md#3-model-terms-separate-from-the-code-license)).
+Level C is blocked on one thing the repository does not contain: the `sft_v1` checkpoint (the patches are in `release/patches/`;
+see [release/README.md](../release/README.md) and [LICENSES.md](LICENSES.md#3-model-terms-separate-from-the-code-license)).
 Level B does not need either, it makes its own.
 
 ## Exact environment
@@ -27,8 +27,10 @@ Level B does not need either, it makes its own.
 
 **Not pinned or not yet recorded:**
 
-- Transitive dependencies of the Modal images and the Modal base image are resolved at build time. Run
-  `modal run gpu/app.py::freeze` and `modal run gpu/lab.py::freeze` once and commit `repro/freeze_*.txt`.
+- Transitive dependencies of the Modal images are resolved at build time. `repro/freeze_*.txt` records what the three images resolve to
+  as of 2026-11-16 (regenerate with `modal run gpu/app.py::freeze` and `modal run gpu/lab.py::freeze`); this is not proof of what the
+  original runs used. Note the generation image resolves `transformers==5.17.0`, not the training image's 5.20.2. The Modal base image
+  (`debian_slim`) is not pinned by digest.
 - The BFCL revision above is the current head of the dataset repository (last modified 2026-04-29, before our runs). The
   original fetch used `main`, whose revision was not recorded. The data reproduces the 595 / 204 split and the skipped
   item, which is the evidence that it is the same data; nothing stronger exists.
