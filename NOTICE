@@ -1,0 +1,15 @@
+Geodesic
+Copyright 2026 The Geodesic authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It is designed to be used with, and its experiment depends on, third-party models and data
+that are NOT covered by this license grant and are not included in this repository:
+
+  - Qwen/Qwen3.5-4B (Apache-2.0, https://huggingface.co/Qwen/Qwen3.5-4B)
+  - Berkeley Function Calling Leaderboard dataset v3
+    (Apache-2.0, https://huggingface.co/datasets/gorilla-llm/Berkeley-Function-Calling-Leaderboard)
+
+Some files under sessions/ quote short excerpts of BFCL items (questions, function schemas) and of
+model outputs on them, as inputs and outputs of the experiment. Those excerpts remain subject to the
+BFCL license. See docs/LICENSES.md for the full list of dependencies, assets and terms.

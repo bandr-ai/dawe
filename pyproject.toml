@@ -1,12 +1,19 @@
 [project]
 name = "geodesic"
-version = "0.0.1"
+version = "0.1.0"
 description = "Edit model weights instead of retraining. First use: fix a fine-tuned model after a harness change."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+gpu = ["modal"]  # launches the jobs in gpu/ and the agent lab; the jobs install their own pinned stack remotely
+dev = ["pytest>=8", "safetensors", "numpy"]  # the last two only cross-check our stdlib safetensors code
+
+[project.urls]
+Repository = "https://github.com/bandr-ai/geodesic"
 
 [project.scripts]
 geodesic = "geodesic.cli:main"
