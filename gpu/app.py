@@ -16,8 +16,10 @@ from pathlib import Path
 
 import modal
 
-MODEL = "Qwen/Qwen3.5-4B"
-REVISION = "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+from geodesic import pins
+
+MODEL = pins.BASE_MODEL
+REVISION = pins.BASE_REVISION
 
 # Modal list prices (modal.com/pricing, checked 2026-11-11), USD per second.
 PRICE = {"H100": 0.001097, "cpu_core": 0.0000131, "mem_gib": 0.00000222}
@@ -29,19 +31,20 @@ runs = modal.Volume.from_name("geodesic-runs", create_if_missing=True)
 hf_cache = modal.Volume.from_name("geodesic-hf-cache", create_if_missing=True)
 VOLS = {"/runs": runs, "/root/.cache/huggingface": hf_cache}
 
-train_image = modal.Image.debian_slim(python_version="3.12").uv_pip_install(
-    "torch==2.13.0",
-    "transformers==5.20.2",
-    "peft==0.21.2",
-    "accelerate==1.15.0",
-    "flash-linear-attention==0.5.2",
-    "hf_transfer",
-).env({"HF_HUB_ENABLE_HF_TRANSFER": "1"})
+train_image = (
+    modal.Image.debian_slim(python_version=pins.PYTHON_IMAGE)
+    .uv_pip_install(*pins.pip_pins(pins.TRAIN_PACKAGES), "hf_transfer")
+    .env({"HF_HUB_ENABLE_HF_TRANSFER": "1"})
+    .add_local_python_source("geodesic")  # gpu/app.py imports geodesic.pins
+)
 
 # The FlashInfer sampler compiles a kernel at start-up and needs nvcc, which this slim image
 # doesn't have. We decode greedily, so vLLM's own sampler is fine.
-vllm_image = modal.Image.debian_slim(python_version="3.12").uv_pip_install("vllm==0.31.0", "hf_transfer").env(
-    {"HF_HUB_ENABLE_HF_TRANSFER": "1", "VLLM_USE_FLASHINFER_SAMPLER": "0"}
+vllm_image = (
+    modal.Image.debian_slim(python_version=pins.PYTHON_IMAGE)
+    .uv_pip_install(*pins.pip_pins(pins.VLLM_PACKAGES), "hf_transfer")
+    .env({"HF_HUB_ENABLE_HF_TRANSFER": "1", "VLLM_USE_FLASHINFER_SAMPLER": "0"})
+    .add_local_python_source("geodesic")
 )
 
 COMMON = dict(gpu=GPU, cpu=CPU, memory=MEM_GIB * 1024, volumes=VOLS, scaledown_window=2)
@@ -377,3 +380,36 @@ def map_(pairs: str = "v1__v4_format,v1__v6_all", run: str = "sft_v1"):
             f.write(json.dumps(res["cost"]) + "\n")
         (ROOT / "runs" / f"map_{p}.json").write_text(json.dumps(res))
         print("saved", ROOT / "runs" / f"map_{p}.json")
+
+
+# --- record the exact environment ----------------------------------------------------------------------
+# Top-level versions are pinned in geodesic/pins.py; their dependencies are resolved when Modal builds the image.
+# Run this once per release and commit the output (repro/freeze_*.txt) so the full set is on record.
+
+
+def _freeze() -> str:
+    import importlib.metadata as md
+    import platform
+
+    pkgs = sorted({f"{d.metadata['Name']}=={d.version}" for d in md.distributions()}, key=str.lower)
+    return f"# python {platform.python_version()} on {platform.platform()}\n" + "\n".join(pkgs) + "\n"
+
+
+@app.function(image=train_image, cpu=1, memory=2048, timeout=600)
+def freeze_train() -> str:
+    return _freeze()
+
+
+@app.function(image=vllm_image, cpu=1, memory=2048, timeout=600)
+def freeze_vllm() -> str:
+    return _freeze()
+
+
+@app.local_entrypoint()
+def freeze():
+    """modal run gpu/app.py::freeze  ->  repro/freeze_train.txt, repro/freeze_vllm.txt (CPU only, a few cents)."""
+    out = ROOT / "repro"
+    out.mkdir(exist_ok=True)
+    (out / "freeze_train.txt").write_text(freeze_train.remote())
+    (out / "freeze_vllm.txt").write_text(freeze_vllm.remote())
+    print("saved", out / "freeze_train.txt", out / "freeze_vllm.txt")

@@ -10,8 +10,15 @@ Test items are never loaded here. Budgets live on the Modal volume, so the agent
 Pieces
   Lab (class, warm SFT model on an H100)
     run(session, code)         agent analysis code; prints come back
-    make_patch(session, name, code)   agent's edit(model, ctx) -> a weight patch on the volume
+    make_patch(session, name, code)   agent's edit(model, ctx) -> a sparse .gpatch on the volume
   try_patch(session, name)     vLLM: score a patch on all train items under v1 and v4 (costs 1 try)
+
+What is and is not enforced (read docs/LAB.md before relying on it):
+  - Budgets and the "no optimizer / no generate / no test data" rules are checked by regex and by a ledger
+    file on the volume. The agent's code runs in-process with the volume mounted writable, so these are
+    guard rails for a cooperative agent, not a sandbox against an adversarial one.
+  - Test items are never loaded into the Lab, but the full BFCL files are in the image
+    (/root/data/bfcl) and the split is a public hash, so withholding is by instruction, not by isolation.
 """
 
 from __future__ import annotations
@@ -26,6 +33,8 @@ import traceback
 from pathlib import Path
 
 import modal
+
+from geodesic import pins
 
 ROOT = Path(__file__).resolve().parent.parent
 PRICE = {"H100": 0.001097, "cpu_core": 0.0000131, "mem_gib": 0.00000222}
@@ -52,16 +61,16 @@ def _with_code(img: modal.Image) -> modal.Image:
 
 
 lab_image = _with_code(
-    modal.Image.debian_slim(python_version="3.12")
+    modal.Image.debian_slim(python_version=pins.PYTHON_IMAGE)
     .uv_pip_install(
-        "torch==2.13.0", "transformers==5.20.2", "accelerate==1.15.0", "flash-linear-attention==0.5.2",
+        *pins.pip_pins({k: v for k, v in pins.TRAIN_PACKAGES.items() if k != "peft"}),
         "numpy", "hf_transfer",
     )
     .env({"HF_HUB_ENABLE_HF_TRANSFER": "1"})
 )
 vllm_image = _with_code(
-    modal.Image.debian_slim(python_version="3.12")
-    .uv_pip_install("vllm==0.31.0", "hf_transfer")
+    modal.Image.debian_slim(python_version=pins.PYTHON_IMAGE)
+    .uv_pip_install(*pins.pip_pins(pins.VLLM_PACKAGES), "hf_transfer")
     .env({"HF_HUB_ENABLE_HF_TRANSFER": "1", "VLLM_USE_FLASHINFER_SAMPLER": "0"})
 )
 COMMON = dict(gpu="H100", cpu=CPU, memory=MEM_GIB * 1024, volumes=VOLS)
@@ -342,8 +351,10 @@ class Lab:
 
     @modal.method()
     def make_patch(self, session: str, name: str, code: str) -> dict:
+        """Run the agent's edit(model, ctx) and save what changed as a sparse, checkpoint-bound .gpatch."""
         import torch
-        from safetensors.torch import save_file
+
+        from geodesic import patch as gp
 
         _check(session, "runs")
         cfg = _config(session)
@@ -352,37 +363,65 @@ class Lab:
             raise ValueError("bad patch name")
         t0 = time.time()
         out, err = self._exec(code, call_edit=True)
-        new, stats = {}, []
-        tot_changed = 0
+        edits, stats = {}, []
         if err is None:
             with torch.no_grad():
                 for n, p in self.P.items():
                     o = self.orig[n]
                     if torch.equal(p, o):
                         continue
-                    diff = (p.float() - o.float())
-                    k = int((diff != 0).sum().item())
-                    tot_changed += k
-                    new[n] = p.detach().to(torch.bfloat16).cpu().contiguous()
-                    stats.append({"tensor": n, "changed": k, "of": o.numel(),
+                    if p.dtype != torch.bfloat16:
+                        raise RuntimeError(f"{n}: patches are saved for bf16 tensors, got {p.dtype}")
+                    pi, oi = p.reshape(-1).view(torch.int16), o.reshape(-1).view(torch.int16)  # bitwise, so NaN/-0 are exact
+                    idx = (pi != oi).nonzero().squeeze(1)
+                    edits[n] = (idx.cpu().tolist(), pi[idx].cpu().numpy().tobytes())
+                    diff = p.float() - o.float()
+                    stats.append({"tensor": n, "changed": len(idx), "of": o.numel(),
                                   "rel_norm": round(diff.norm().item() / (o.float().norm().item() + 1e-12), 6)})
         self._restore()
         res = {"stdout": out, "error": err}
         if err is None:
-            if not new:
+            if not edits:
                 res["error"] = "edit() changed no weights"
             else:
                 d = _sdir(session) / "patches"
                 d.mkdir(parents=True, exist_ok=True)
-                save_file(new, str(d / f"{name}.safetensors"))
-                meta = {"name": name, "changed_weights": tot_changed, "tensors": stats, "code": code,
-                        "created": time.strftime("%Y-%m-%d %H:%M:%S")}
-                (d / f"{name}.json").write_text(json.dumps(meta, indent=1))
-                runs.commit()
-                res["patch"] = {k: v for k, v in meta.items() if k != "code"}
+                try:
+                    patch = gp.create_from_edits(
+                        f"/runs/{BASE_RUN}/merged", edits, d / f"{name}{gp.SUFFIX}", name=f"{session}/{name}",
+                        description=f"DAWE session {session}: fix {cfg['target']}, keep {cfg['keep']}",
+                        lineage=pins.lineage_sft_v1(), ident=_source_identity())
+                except gp.PatchError as e:
+                    res["error"] = f"could not save patch: {e}"
+                else:
+                    meta = {"name": name, "changed_weights": patch.changed(), "file_bytes": patch.size_bytes,
+                            "patch_id": patch.patch_id, "tensors": stats, "code": code,
+                            "created": time.strftime("%Y-%m-%d %H:%M:%S")}
+                    (d / f"{name}.json").write_text(json.dumps(meta, indent=1))
+                    runs.commit()
+                    res["patch"] = {k: v for k, v in meta.items() if k != "code"}
         led = _charge(session, "runs", time.time() - t0 + self._take_unbilled(), f"patch {name}")
         res["ledger"] = _brief(led)
         return res
+
+
+def _source_identity():
+    """Content fingerprint of the SFT checkpoint, hashed once and cached next to it on the volume."""
+    from geodesic import patch as gp
+
+    root = Path(f"/runs/{BASE_RUN}/merged")
+    cache = root.parent / "fingerprint.json"
+    stamp = {f.name: [f.stat().st_size, f.stat().st_mtime_ns] for f in sorted(root.glob("*.safetensors"))}
+    if cache.exists():
+        c = json.loads(cache.read_text())
+        if c["stamp"] == stamp:
+            return gp.Identity(c["layout_sha256"], c["fingerprint"], c["n_tensors"], c["config"], c["tokenizer"], c["hashes"])
+    ident = gp.identify(root)
+    cache.write_text(json.dumps({"stamp": stamp, "layout_sha256": ident.layout_sha256, "fingerprint": ident.fingerprint,
+                                 "n_tensors": ident.n_tensors, "config": ident.config, "tokenizer": ident.tokenizer,
+                                 "hashes": ident.hashes}))
+    runs.commit()
+    return ident
 
 
 def _brief(led: dict) -> dict:
@@ -393,38 +432,28 @@ def _brief(led: dict) -> dict:
 
 
 def _patched_dir(session: str | None, name: str | None) -> str:
-    """The SFT model with a patch applied, as a model folder vLLM can load. Unchanged shards are symlinks."""
-    import os
+    """The SFT model with a patch applied, as a model folder vLLM can load (unchanged files are symlinks).
 
-    from safetensors.torch import load_file, save_file
+    Uses the same apply code as the public `geodesic patch apply`, in --fast mode: the lab made the patch from
+    this very checkpoint, so re-hashing 8 GB on every try would only cost GPU minutes.
+    Old sessions saved whole tensors as <name>.safetensors; those are converted to the sparse format on first use.
+    """
+    import shutil
+
+    from geodesic import patch as gp
 
     src = Path(f"/runs/{BASE_RUN}/merged")
     if not name:
         return str(src)
-    patch = load_file(str(_sdir(session) / "patches" / f"{name}.safetensors"))
-    dst = Path(f"/tmp/patched_{name}")
-    dst.mkdir(parents=True, exist_ok=True)
-    idx_path = src / "model.safetensors.index.json"
-    wmap = json.loads(idx_path.read_text())["weight_map"] if idx_path.exists() else None
-    shard_of = {}
-    for n in patch:
-        cands = [n, n.replace("model.", "", 1)]
-        hit = next((c for c in cands if wmap is None or c in wmap), None)
-        if hit is None:
-            raise KeyError(f"patched tensor {n} not found in checkpoint index")
-        shard_of[n] = (hit, wmap[hit] if wmap else "model.safetensors")
-    by_shard: dict[str, dict] = {}
-    for n, (ckpt_name, shard) in shard_of.items():
-        by_shard.setdefault(shard, {})[ckpt_name] = patch[n]
-    for f in src.iterdir():
-        if f.name in by_shard:
-            t = load_file(str(f))
-            for k, v in by_shard[f.name].items():
-                assert t[k].shape == v.shape, (k, t[k].shape, v.shape)
-                t[k] = v.to(t[k].dtype)
-            save_file(t, str(dst / f.name), metadata={"format": "pt"})
-        elif not (dst / f.name).exists():
-            os.symlink(f, dst / f.name)
+    pdir = _sdir(session) / "patches"
+    gpatch = pdir / f"{name}{gp.SUFFIX}"
+    if not gpatch.exists():
+        gp.create_from_dense(src, pdir / f"{name}.safetensors", gpatch, name=f"{session}/{name}",
+                             lineage=pins.lineage_sft_v1(), ident=_source_identity())
+        runs.commit()
+    dst = Path(f"/tmp/patched_{session}_{name}")
+    shutil.rmtree(dst, ignore_errors=True)
+    gp.apply_patch(gpatch, src, dst, full=False, link="symlink")
     return str(dst)
 
 
@@ -621,3 +650,53 @@ def final(session: str, name: str, eval_file: str = "data/eval/bfcl_test.jsonl",
     out = ROOT / "runs" / f"preds_dawe_{session}_{name}{suffix}.jsonl"
     out.write_text("".join(json.dumps(p) + "\n" for p in r["preds"]))
     print("saved", out, r["cost"])
+
+
+@app.function(image=lab_image, timeout=30 * 60, cpu=2, memory=8 * 1024, volumes=VOLS)
+def export_patch(session: str, name: str) -> bytes:
+    """The sparse .gpatch for a session patch, converting an old whole-tensor patch if needed. CPU only.
+
+    The old saver recorded `changed_weights` next to each patch; the conversion must reproduce that count exactly,
+    otherwise it raises (the stored tensors and the checkpoint disagree about what was edited).
+    """
+    from geodesic import patch as gp
+
+    runs.reload()
+    pdir = _sdir(session) / "patches"
+    gpatch = pdir / f"{name}{gp.SUFFIX}"
+    if not gpatch.exists():
+        gp.create_from_dense(f"/runs/{BASE_RUN}/merged", pdir / f"{name}.safetensors", gpatch, name=f"{session}/{name}",
+                             lineage=pins.lineage_sft_v1(), ident=_source_identity())
+        runs.commit()
+    meta = json.loads((pdir / f"{name}.json").read_text())
+    got = gp.load_patch(gpatch).changed()
+    if got != meta["changed_weights"]:
+        raise RuntimeError(f"{session}/{name}: sparse patch changes {got} weights, the lab recorded {meta['changed_weights']}")
+    return gpatch.read_bytes()
+
+
+@app.local_entrypoint()
+def export(session: str, name: str, out: str = "release/patches"):
+    """Download a session patch as a sparse .gpatch: modal run gpu/lab.py::export --session s1 --name eos12"""
+    data = export_patch.remote(session, name)
+    dest = ROOT / out / f"{session}_{name}.gpatch"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(data)
+    print("saved", dest, f"({len(data):,} bytes)")
+
+
+@app.function(image=lab_image, cpu=1, memory=2048, timeout=600)
+def freeze_lab() -> str:
+    import importlib.metadata as md
+    import platform
+
+    pkgs = sorted({f"{d.metadata['Name']}=={d.version}" for d in md.distributions()}, key=str.lower)
+    return f"# python {platform.python_version()} on {platform.platform()}\n" + "\n".join(pkgs) + "\n"
+
+
+@app.local_entrypoint()
+def freeze():
+    """modal run gpu/lab.py::freeze  ->  repro/freeze_lab.txt (the lab's analysis image; vLLM image: see gpu/app.py::freeze)."""
+    (ROOT / "repro").mkdir(exist_ok=True)
+    (ROOT / "repro" / "freeze_lab.txt").write_text(freeze_lab.remote())
+    print("saved", ROOT / "repro" / "freeze_lab.txt")
