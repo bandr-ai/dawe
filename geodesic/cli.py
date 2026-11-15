@@ -1,12 +1,15 @@
 """geodesic command line.
 
-  geodesic fetch                        download BFCL into data/bfcl
+  geodesic fetch                        download BFCL (pinned revision, hash-checked) into data/bfcl
+  geodesic splits [--write]             check (or regenerate) splits/bfcl_v3_split.json
+  geodesic patch ...                    sparse weight patches: create | from-dense | inspect | apply | restore | verify
   geodesic harnesses                    list harness versions
   geodesic render <harness> <item_id>   show the prompt and correct reply for one BFCL item
   geodesic roundtrip                    check every BFCL item survives render -> reply -> parse -> score
   geodesic build-sft                    write the SFT file (BFCL train split under one harness)
   geodesic build-eval                   write the eval prompts (BFCL test split x harnesses)
   geodesic build-pairs <a> <b>          paired traces: train items under harness a and b
+  geodesic map-summary <map.json> [<map2.json>]   read a runs/map_*.json: is the harness change concentrated?
   geodesic report                       one table with every eval in runs/
   geodesic score <preds.jsonl>          score model outputs per harness
 """
@@ -19,7 +22,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from . import bfcl
+from . import bfcl, splits
 from .datasets import eval_rows, pair_rows, read_jsonl, score, sft_rows, write_jsonl
 from .harness import Harness, available, parse_calls, render, target, to_bfcl
 
@@ -36,6 +39,15 @@ def _roundtrip(h: Harness, items: list[bfcl.Item]) -> tuple[int, list[str]]:
     return ok, bad
 
 
+def format_table(title: str, rows: dict[str, dict[str, float | None]], hs: list[str]) -> list[str]:
+    """Accuracy table: one row per model, one column per harness (None -> not run)."""
+    w = max(len(h) for h in hs) + 1
+    out = [title, f"{'model':24}" + "".join(f"{h:>{w}}" for h in hs)]
+    for name, r in rows.items():
+        out.append(f"{name:24}" + "".join(f"{r[h] * 100:{w - 1}.1f}%" if r.get(h) is not None else f"{'-':>{w}}" for h in hs))
+    return out
+
+
 def report(items: list[bfcl.Item]) -> str:
     """All runs/preds_*.jsonl in one table. The shim row is the v1-trained model scored on v1:
     a perfect translation layer turns any of our harness changes back into v1."""
@@ -46,22 +58,27 @@ def report(items: list[bfcl.Item]) -> str:
         v1 = rows["sft_v1"]["v1"]
         rows["sft_v1 + shim"] = {h: v1 for h in rows["sft_v1"]}
     hs = available()
-    out = ["all items (n=204)", f"{'model':22}" + "".join(f"{h:>11}" for h in hs)]
-    for name, r in rows.items():
-        out.append(f"{name:22}" + "".join(f"{r[h]['accuracy'] * 100:10.1f}%" if h in r else f"{'-':>11}" for h in hs))
-    out += ["", "parallel items only (n=48)", f"{'model':22}" + "".join(f"{h:>11}" for h in hs)]
-    for name, r in rows.items():
-        out.append(
-            f"{name:22}"
-            + "".join(f"{r[h]['by_category'].get('parallel', 0) * 100:10.1f}%" if h in r else f"{'-':>11}" for h in hs)
-        )
-    return "\n".join(out)
+    test = [i for i in items if i.split == "test"]
+    n_par = sum(i.category == "parallel" for i in test)
+    overall = {n: {h: r[h]["accuracy"] for h in r} for n, r in rows.items()}
+    parallel = {n: {h: r[h]["by_category"].get("parallel", 0) for h in r} for n, r in rows.items()}
+    return "\n".join(
+        format_table(f"all items (n={len(test)})", overall, hs) + [""]
+        + format_table(f"parallel items only (n={n_par})", parallel, hs)
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if argv and argv[0] == "patch":  # no dataset needed; keeps the apply path free of BFCL files
+        from . import patch
+
+        return patch.main(argv[1:])
     ap = argparse.ArgumentParser(prog="geodesic")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("fetch")
+    sp = sub.add_parser("splits")
+    sp.add_argument("--write", action="store_true")
     sub.add_parser("harnesses")
     r = sub.add_parser("render")
     r.add_argument("harness")
@@ -78,10 +95,19 @@ def main(argv: list[str] | None = None) -> int:
     pr.add_argument("a")
     pr.add_argument("b")
     sub.add_parser("report")
+    ms = sub.add_parser("map-summary")
+    ms.add_argument("maps", type=Path, nargs="+")
     sc = sub.add_parser("score")
     sc.add_argument("preds", type=Path)
     a = ap.parse_args(argv)
 
+    if a.cmd == "map-summary":
+        from . import mapping
+
+        print(mapping.summarize(a.maps[0]))
+        if len(a.maps) > 1:
+            print("\n" + mapping.compare(a.maps[0], a.maps[1]))
+        return 0
     if a.cmd == "fetch":
         for p in bfcl.fetch():
             print(p)
@@ -91,6 +117,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{n:12} {Harness.load(n).description}")
         return 0
     items = bfcl.load_all()
+    if a.cmd == "splits":
+        if a.write:
+            print(splits.write(items))
+            return 0
+        problems = splits.check(items)
+        print("split manifest matches" if not problems else "\n".join(problems))
+        return 1 if problems else 0
     if a.cmd == "build-sft":
         train = [i for i in items if i.split == "train"]
         out = a.out or Path(f"data/sft/{a.harness}_bfcl_train.jsonl")
@@ -106,8 +139,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"--- assistant (target)\n{target(h, it)}")
         return 0
     if a.cmd == "roundtrip":
-        splits = Counter(i.split for i in items)
-        print(f"{len(items)} items, split {dict(splits)}, skipped {bfcl.SKIPPED}")
+        counts = Counter(i.split for i in items)
+        print(f"{len(items)} items, split {dict(counts)}, skipped {bfcl.SKIPPED}")
         failed = False
         for n in a.harness or available():
             ok, bad = _roundtrip(Harness.load(n), items)

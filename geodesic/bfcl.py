@@ -13,7 +13,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-HF_BASE = "https://huggingface.co/datasets/gorilla-llm/Berkeley-Function-Calling-Leaderboard/resolve/main"
+from . import pins
+
+HF_BASE = f"https://huggingface.co/datasets/{pins.BFCL_REPO}/resolve/{pins.BFCL_REVISION}"
 CATEGORIES = ("simple", "multiple", "parallel")
 DEFAULT_DATA_DIR = Path("data/bfcl")
 
@@ -30,21 +32,43 @@ class Item:
 
     @property
     def split(self) -> str:
-        """Stable train/test split by id hash, 75/25 like Deletion Tuning's SFT setup."""
+        """Stable 75/25 train/test split by id hash (no seed). splits/bfcl_v3_split.json lists every id."""
         h = int(hashlib.sha256(self.id.encode()).hexdigest(), 16) % 100
         return "test" if h < 25 else "train"
 
 
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def verify_data(data_dir: Path = DEFAULT_DATA_DIR) -> list[str]:
+    """Problems with the local BFCL files compared with the pinned revision (empty list = identical)."""
+    problems = []
+    for rel, want in pins.BFCL_SHA256.items():
+        p = data_dir / rel
+        if not p.exists():
+            problems.append(f"{rel}: missing")
+        elif (got := _sha256(p)) != want:
+            problems.append(f"{rel}: sha256 {got[:12]}... != pinned {want[:12]}...")
+    return problems
+
+
 def fetch(data_dir: Path = DEFAULT_DATA_DIR) -> list[Path]:
-    """Download the BFCL v3 files we use. Skips files that already exist."""
+    """Download the BFCL v3 files we use from the pinned dataset revision and check their hashes.
+
+    An existing file that does not match the pin is an error, never silently reused.
+    """
     out = []
-    for cat in CATEGORIES:
-        for rel in (f"BFCL_v3_{cat}.json", f"possible_answer/BFCL_v3_{cat}.json"):
-            dest = data_dir / rel
-            if not dest.exists():
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                urllib.request.urlretrieve(f"{HF_BASE}/{rel}", dest)
-            out.append(dest)
+    for rel in pins.BFCL_SHA256:
+        dest = data_dir / rel
+        if not dest.exists():
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            tmp = dest.with_suffix(dest.suffix + ".part")
+            urllib.request.urlretrieve(f"{HF_BASE}/{rel}", tmp)
+            tmp.replace(dest)
+        out.append(dest)
+    if problems := verify_data(data_dir):
+        raise RuntimeError("BFCL files do not match the pinned revision:\n  " + "\n  ".join(problems))
     return out
 
 

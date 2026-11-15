@@ -1,0 +1,41 @@
+{
+ "checkpoint": "sft_v1/merged",
+ "base_model": {
+  "repo": "Qwen/Qwen3.5-4B",
+  "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+ },
+ "method": "LoRA SFT on BFCL train split rendered with harness v1, adapter merged into bf16 weights",
+ "sft": {
+  "harness": "v1",
+  "epochs": 3,
+  "lr": 0.0001,
+  "lora_rank": 32,
+  "lora_alpha": 64,
+  "lora_dropout": 0.0,
+  "lora_targets": "every nn.Linear in the language model (not vision tower, not lm_head)",
+  "batch": 4,
+  "grad_accum": 4,
+  "warmup_steps": 10,
+  "schedule": "linear decay to 0",
+  "weight_decay": 0.0,
+  "grad_clip": 1.0,
+  "seed": 0,
+  "precision": "bf16",
+  "thinking": "off (enable_thinking=False)",
+  "loss": "reply tokens + <|im_end|> only"
+ },
+ "train_split": "splits/bfcl_v3_split.json (train ids)",
+ "dataset": {
+  "repo": "gorilla-llm/Berkeley-Function-Calling-Leaderboard",
+  "revision": "61fc0608cfd831fcfbbaa676ebdfef0ed963eeda"
+ },
+ "software": {
+  "torch": "2.13.0",
+  "transformers": "5.20.2",
+  "peft": "0.21.2",
+  "accelerate": "1.15.0",
+  "flash-linear-attention": "0.5.2",
+  "image": "modal debian_slim python 3.12"
+ },
+ "note": "LoRA does not touch embed_tokens, so the patched rows are identical to the base model's; the fingerprint covers every tensor to tell the fine-tune from the base."
+}
