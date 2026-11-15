@@ -8,6 +8,29 @@ baseline recipe, the data-to-weight map code, the bounded agent lab, everything 
 checkpoint-bound patch format with apply and restore tools, and the numbers. Read
 [docs/WRITEUP.md](docs/WRITEUP.md) for what was found and, just as important, what was not shown.
 
+## Use DAWE with your own data
+
+Give your coding agent this prompt:
+
+```text
+Read skills/dawe/SKILL.md and use DAWE on my traces in /path/to/logs.
+The model checkpoint is /path/to/checkpoint. Investigate why it stops after
+one tool call, derive a small weight patch, and test that existing behavior
+still works. Inspect the data first and propose the compute budget before
+starting paid GPU work.
+```
+
+The agent inspects your source, prepares corrected and preservation examples, maps the failing decisions, writes and tests edits, and returns a checkpoint-bound patch with its evaluation. You can supply other model failures too; a small edit is not guaranteed. Model weights and trustworthy targets or a verifier are required. This is a skill-driven investigation, not an automatic patch-search service.
+
+The skill is bundled in source and Python wheels. Read it directly, locate an installed copy with `geodesic skill path`, or copy it into a skills directory you choose:
+
+```bash
+geodesic skill install --dest /path/to/your/skills
+geodesic workbench init --source /path/to/logs --model /path/to/checkpoint --out /path/to/dawe-run
+```
+
+Preparation is local and starts no compute. The agent adapts the user's data/runtime; the original Modal lab remains BFCL-specific. See [the skill](skills/dawe/SKILL.md) and [the no-GPU example](examples/dawe/README.md). Keep private runs, data, and checkpoints out of Git.
+
 ## The result in one table
 
 Qwen3.5-4B, LoRA SFT on BFCL under harness `v1`; 204 held-out items, greedy, one run each
@@ -109,6 +132,9 @@ agents saw; test = held-out items under every harness.
 geodesic fetch | splits [--write] | harnesses | render <harness> <id> | roundtrip
 geodesic build-sft [--harness H] | build-eval | build-pairs A B | map-summary MAP.json | report | score preds.jsonl
 geodesic patch create | from-dense | inspect | apply | restore | verify
+geodesic skill path | install --dest DIR
+geodesic workbench init --source DATA --model CHECKPOINT --out RUN
+geodesic workbench freeze EXAMPLES --development-dir EDIT --evaluation-dir EVAL
 ```
 
 ## Credits

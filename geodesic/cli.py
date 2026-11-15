@@ -1,5 +1,7 @@
 """geodesic command line.
 
+  geodesic skill path | install --dest DIR    locate or install the DAWE skill
+  geodesic workbench init | freeze       prepare runs with user data, no GPU
   geodesic fetch                        download BFCL (pinned revision, hash-checked) into data/bfcl
   geodesic splits [--write]             check (or regenerate) splits/bfcl_v3_split.json
   geodesic patch ...                    sparse weight patches: create | from-dense | inspect | apply | restore | verify
@@ -74,8 +76,14 @@ def main(argv: list[str] | None = None) -> int:
         from . import patch
 
         return patch.main(argv[1:])
+    if argv and argv[0] in ("skill", "workbench"):
+        from . import workbench
+
+        return (workbench.skill_main if argv[0] == "skill" else workbench.main)(argv[1:])
     ap = argparse.ArgumentParser(prog="geodesic")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("skill", help="path | install --dest DIR: bundled DAWE skill")
+    sub.add_parser("workbench", help="init | freeze: prepare a DAWE run with your data")
     sub.add_parser("fetch")
     sp = sub.add_parser("splits")
     sp.add_argument("--write", action="store_true")

@@ -21,3 +21,6 @@ geodesic = "geodesic.cli:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel.force-include]
+"skills/dawe" = "geodesic/_skills/dawe"
