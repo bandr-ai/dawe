@@ -118,20 +118,34 @@ for a range of models is the direction we want to test next.
 
 ## Using DAWE
 
-Open the repository in Astra/Fable and point it at the [DAWE skill](../skills/dawe/SKILL.md):
+The [DAWE skill](../skills/dawe/SKILL.md) specifies the full investigation:
+data preparation, baseline inference, decision-level state analysis, candidate experiments,
+controls, preservation checks, and evaluation of the exported patch.
+
+Open the repository in Astra/Fable and give it your model, data, and objective. For example:
 
 ```text
-Read skills/dawe/SKILL.md and use DAWE.
-My data is in /path/to/data. My model is /path/to/checkpoint.
-Fix: [what broke]. Preserve: [what already works].
-Inspect the data first and propose a compute budget before paid work.
-Return the tested patch, evaluation results, and scripts.
+Use skills/dawe/SKILL.md to investigate /data/harness-v3 with /models/my-checkpoint.
+The model stops after one XML tool call when two are required.
+Keep the old JSON format and single-call behavior working.
+Corrections and tool schemas are in the data directory.
+Inspect locally first; propose the full experiment budget before paid compute.
 ```
 
-The agent needs accessible weights and reliable targets or a verifier. It prepares the data,
-measures the failure, and investigates candidate edits. A patch is returned when repair and
-preservation checks pass; otherwise the report records what failed. The [user guide](USAGE.md)
-covers setup and patch commands.
+The skill tells the agent to build the scorer, map failing decisions to model states, derive and
+compare edits, and test generated replies. For a readout correction, the planned controls include
+a same-norm random edit and a constant-logit-bias comparison; combined edits also need component
+checks. What runs depends on the agreed budget, and omitted controls stay visible in the report.
+
+Before accepting a repair, the agent exports a checkpoint-bound `.gpatch`, applies it to a fresh
+copy, reloads that checkpoint, and evaluates repair and preservation on reserved examples. It
+checks restore as well. The handoff includes the patch, per-item predictions, experiment history,
+scorer and edit code, costs, and commands to reproduce the run. Failed or unfinished investigations
+return a diagnosis with that status, rather than a claimed repair.
+
+Accessible weights and trustworthy targets or a verifier are still required. The
+[user guide](USAGE.md) covers setup; the skill's investigation and delivery references specify the
+full procedure. This expanded protocol adds no new measurements to the original experiment.
 
 ## Testing on larger customer models
 

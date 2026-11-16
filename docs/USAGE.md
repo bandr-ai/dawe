@@ -37,29 +37,21 @@ uv sync
 uv run dawe skill path
 ```
 
-Give Astra/Fable this prompt, replacing the paths and failure description:
+Give Astra/Fable the inputs and objective. The skill owns the experiment procedure:
 
 ```text
-Read skills/dawe/SKILL.md and use it on my data.
-
-Data: /absolute/path/to/dawe-inputs/logs
-Model: /absolute/path/to/models/my-model
-Run directory: /absolute/path/to/dawe-runs/xml-repair
-
-After our harness switched to XML, the model often ends its turn after
-the first tool call even when the request needs two calls. Corrected
-examples and tool schemas are in the data folder. Preserve single-call
-behavior and the old JSON format.
-
-Inspect the files first. Prepare a scorer and separate development and
-evaluation groups. Explain the proposed compute and acceptance criteria
-before starting paid work; no paid compute is authorized yet.
-
-Then, within the agreed limits, diagnose the failing decisions, derive
-and test small closed-form weight edits, and evaluate the chosen patch.
-Return REPORT.md, the patch if successful, the scripts and per-item
-results. Stop any GPU resources you start when finished.
+Use skills/dawe/SKILL.md to investigate /data/harness-v3 with /models/my-checkpoint.
+Write the investigation to /runs/dawe/xml-repair.
+The model stops after one XML tool call when two are required.
+Preserve the old JSON format and single-call behavior.
+Corrections and tool schemas are in the data directory.
+Inspect locally first; propose the full experiment budget before paid compute.
 ```
+
+The skill includes the [investigation playbook](../skills/dawe/references/investigation.md) and
+[evaluation/delivery protocol](../skills/dawe/references/evaluation.md). You do not need to repeat
+instructions for baseline generation, model-state mapping, candidate controls, or final evaluation
+in your prompt. The agent is responsible for those stages and for reporting gaps honestly.
 
 If you already have an agreed budget or available local GPU, include that instead. Set a numeric preservation tolerance before candidate selection. Model size and runtime determine memory and cost; the original experiment's costs are not a quote for your run.
 
@@ -73,12 +65,16 @@ This creates `your/skills/dawe/` and refuses to overwrite an existing copy. Agen
 
 ## 3. What happens during the run
 
-1. **Inspect and prepare.** The agent reads a small source sample, checks the checkpoint/runtime, and creates a run workspace. It recovers reviewed targets and writes a source-specific normalizer and task scorer. You review unresolved questions about the intended behavior.
-2. **Freeze the evidence.** Related attempts, old/new formats, and corrections stay in the same group. Examples already inspected go into development. A separate evaluation set contains both repair and preservation cases. Evaluation contents and scores stay out of candidate selection; directory separation is cooperative, not filesystem isolation.
-3. **Measure the baseline.** The agent generates actual replies under your serving template and decoding settings, scores repair and preservation behavior, and records the model fingerprint. Local preparation has not launched a model job; this stage requires the agreed compute.
-4. **Map and edit.** It identifies specific failing token decisions and inspects model states. It derives small candidate edits from development evidence, such as a closed-form readout correction, and scores generated outputs after each try. It starts each candidate from the original checkpoint. There is no optimizer-based fine-tuning in this workflow.
-5. **Evaluate once selected.** It freezes the chosen edit and scorer, then compares baseline and patched generations on evaluation examples using identical settings. It reports repair gains and preservation regressions separately, with counts and per-item results.
-6. **Deliver and stop.** If acceptance criteria pass, it exports a checkpoint-bound `.gpatch` and verifies apply/restore. Otherwise it returns the diagnosis and failed attempts. It stops at the candidate/budget cap and shuts down resources either way.
+1. **Inspect and prepare.** The agent inventories your source, targets, checkpoint and serving setup; writes a normalizer and scorer; and records acceptance criteria, compute limits and reserved final-evaluation budget in `PLAN.md`. It checks the scorer against correct, wrong, malformed and truncated outputs.
+2. **Freeze the evidence.** Related attempts, old/new formats and corrections stay in one group. Development fit/validation groups support diagnosis and selection. Separate evaluation inputs remain outside editing workers and context. Directory separation is cooperative, not filesystem isolation.
+3. **Reproduce and map.** Actual generated repair/preservation baselines establish the failure. The agent rules out serving/template/scorer bugs, localizes decisions, and compares logits and hidden states; it may use targeted gradients. Probe accuracy alone does not establish a causal mechanism.
+4. **Run the lab.** Each candidate has a logged hypothesis, closed-form derivation, cheap screen and full generation evaluation, starting from source weights. A readout hypothesis budgets same-support/same-norm random and constant-bias controls; multi-part patches need component checks. Omitted controls are explicit. There is no optimizer-based fine-tuning in this procedure.
+5. **Test the delivered artifact.** Selection closes before evaluation. The agent exports the patch, applies it to a fresh checkpoint directory, loads that checkpoint in a new inference process, and evaluates repair/preservation with identical baseline settings. Per-item wins and regressions are retained, even when net accuracy is unchanged. Restore is checked against the source identity.
+6. **Deliver and stop.** `REPORT.md` states accepted, rejected or incomplete. An accepted run includes the `.gpatch`, environment and hashes, normalizer/scorer/inference/edit scripts, all tries and controls, per-item results and reproduction commands. It stops owned resources at success, failure or budget exhaustion.
+
+This protocol goes beyond the original experiment's incomplete controls and exported-path evaluation.
+It describes what new runs should verify; it does not retroactively add those checks to the research results.
+The CLI does not automate a full experiment: source- and model-specific code is written by the agent.
 
 For reference, the preparation commands the agent uses are:
 
@@ -100,7 +96,7 @@ You can try just these preparation steps with the [synthetic no-GPU example](../
 
 ## 4. What you get back and how to use it
 
-Expect a `REPORT.md` explaining the exact checkpoint, data/split hashes, scorer, baseline and patched counts, preservation regressions, compute used, and limitations. Keep the normalizer, scorer, edit code, try log, and per-item evaluation results with it. A successful investigation also returns a frozen `.gpatch`.
+Expect a `REPORT.md` explaining the exact checkpoint, data/split hashes, scorer, baseline and patched counts, preservation regressions, compute used, and limitations. Keep the normalizer, scorer, edit code, try log, and per-item evaluation results with it. An accepted investigation also returns a frozen `.gpatch`, an artifact manifest and `reproduce.sh`. A candidate that was not evaluated after export/apply/reload is reported as incomplete, even if its in-memory development scores improved.
 
 Inspect and apply that patch to the exact source checkpoint:
 
