@@ -36,6 +36,10 @@ Fit in float32 or better and check conditioning. Set desired changes to zero on 
 
 If the desired information is absent, readout edits may not help. Inspect earlier states or another constrained edit, or stop with the diagnosis. Do not claim a mask, ridge readout, weight-diff transfer, and optimizer training are the same mechanism.
 
+## Experiment and delivery protocol
+
+Use [the investigation playbook](investigation.md) for baseline adapters, decision mapping, candidate records, controls and selection. Use [the evaluation protocol](evaluation.md) for inference from the applied artifact, paired per-item reporting, restore checks and the reproduction bundle. The probe and patch CLI do not implement that entire loop.
+
 ## Report and stop conditions
 
 Before tries, record maximum candidates, compute authorization, evaluation metric, preservation tolerance, and generation limits. Include model-load and idle time in cost accounting. A JSON ledger writable by agent code is cooperative accounting, not a hard provider cap. Configure provider limits when running remotely. End with a measured patch or a diagnosis and explicit failure; stop remote resources either way.

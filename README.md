@@ -24,26 +24,33 @@ cd dawe
 uv sync
 ```
 
-Open the repo in Astra/Fable and give it this:
+Open the repo in Astra/Fable. Give it your inputs and objective; the skill contains the experiment procedure:
 
 ```text
-Read skills/dawe/SKILL.md and use DAWE.
-
-My data is in /path/to/data.
-My model checkpoint is /path/to/checkpoint.
-Fix: [describe the behavior you want to change].
-Preserve: [describe what already works].
-
-Handle the data preparation and evaluation. Inspect the files first and
-propose a compute budget before paid work. Return a tested patch, the
-results, and the scripts used to produce it. Stop GPU resources when done.
+Use skills/dawe/SKILL.md to investigate /data/harness-v3 with /models/my-checkpoint.
+The model stops after one XML tool call when two are required.
+Preserve the old JSON format and single-call behavior.
+Corrections and tool schemas are in the data directory.
+Inspect locally first; propose the full experiment budget before paid compute.
 ```
 
-That's the starting point. You don't need to choose layers, label decision tokens, or convert your logs
-by hand. The agent adapts the workflow to your data and model. It needs accessible weights and reliable
-correct answers or a verifier; it asks for missing essentials after inspecting what you supplied.
+You do not need to choose layers or design the evaluation. The skill makes the agent carry out:
 
-You get a report, evaluation results, and—when an edit passes the checks—a checkpoint-bound `.gpatch`.
+1. **Prepare and reproduce:** normalize your data, validate a task scorer, freeze grouped splits, and generate repair/preservation baselines with your serving settings.
+2. **Diagnose and map:** locate failing token decisions, compare logits and model states, and test a concrete editing hypothesis.
+3. **Run the lab:** derive closed-form candidates, screen them, score complete replies, and compare mechanism-specific controls and component ablations within the budget.
+4. **Test the exported patch:** freeze selection, export and apply the `.gpatch`, reload it in a fresh inference process, evaluate reserved examples, and verify restore.
+5. **Hand back the investigation:** report per-item gains/regressions, every candidate/control, costs, scripts, hashes, and reproduction commands. Stop the run's GPU resources.
+
+The [skill](skills/dawe/SKILL.md) includes an [investigation playbook](skills/dawe/references/investigation.md)
+and an [evaluation/delivery protocol](skills/dawe/references/evaluation.md). The repository supplies preparation commands,
+a state collector, and patch tools; the agent writes the data/model-specific experiment adapters.
+This is not an automatic search command or a guarantee that every failure has a small repair.
+
+An accepted run returns a tested, checkpoint-bound `.gpatch` and the reproduction bundle.
+An unsuccessful or unfinished run returns a diagnosis and an explicit rejected/incomplete verdict.
+Accessible weights and reliable targets or a verifier are needed; missing inputs are resolved after inspection.
+
 Apply it to a new checkpoint directory:
 
 ```bash

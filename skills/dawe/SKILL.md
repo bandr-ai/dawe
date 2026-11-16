@@ -1,57 +1,61 @@
 ---
 name: dawe
-description: Investigate failures in a user's model using their traces or corrected examples, map failing decisions to model states, derive small weight edits, and evaluate and export a checkpoint-bound patch. Use for data-attributed weight editing with accessible model weights; API-only models can be diagnosed but cannot be patched.
+description: Run a data-attributed weight-editing investigation on a user's model and traces, from source-specific data preparation and model-state diagnosis through controlled candidate experiments, preservation checks, and evaluation of an exported checkpoint-bound patch. Use when accessible model weights and trustworthy targets or a verifier are available; API-only models can be diagnosed but cannot be weight-patched.
 ---
 
-# DAWE: from failing examples to a weight patch
+# DAWE: investigate, edit, test, and ship a weight patch
 
-The user supplies data and a model. You do the source-specific work: inspect the data, build a reliable scorer, identify the failure, inspect model states, derive an edit, test it, and deliver a patch with evidence. They should not need to pre-label layers or know the DAWE machinery. Do not substitute a fine-tuning run for weight editing.
+The user brings data, an exact checkpoint, and the behavior to change or preserve. Own the investigation: build the data and evaluation adapters, reproduce the behavior, map decisions to model states, derive candidate edits, run controlled experiments, and verify the exported patch in inference. Do not make the user design the experiment or give them only a plan and a `.gpatch` file.
 
-This skill is an experimental workflow, not a promise that every behavior has a small fix. The published DAWE experiment repaired structural output failures in one model. Use that evidence as a worked example, not a universal prescription to edit EOS or two embedding rows.
+DAWE is an experimental workflow, not a universal repair algorithm. The worked experiment fixed structural output failures in one checkpoint; it does not prove that arbitrary errors have a small fix. Use its analyses as examples, not as instructions to edit EOS in every model. Do not substitute fine-tuning for weight editing.
 
-## Start with what the user provided
+## 1. Inspect and define the run
 
-Inspect a small sample of their files and the existing model/runtime before asking questions. Discover available corrections, verifier code, tool schemas, repeated attempts, and known-good examples. Keep raw files intact. Do not print credentials or upload source data to another service without authorization.
+Inspect a small source sample, model configuration, tokenizer, serving template, and available hardware before asking for missing information. Discover corrections, tool schemas, verifiers, old/new harness versions, and working cases. Keep source data intact and private. Failed traces do not establish correct answers: use reviewed corrections, executable checks, or a reliable oracle, and record which one supplied each target.
 
-You need the intended failure, accessible weights for the exact checkpoint, trustworthy target behavior, and a way to score it. Ask only for missing essentials that the files and conversation cannot resolve. An API endpoint alone does not provide weights. A failed trace alone does not establish a correct answer: recover one from an executable verifier, supplied corrections, or a reliable oracle; otherwise report that gap instead of inventing gold labels.
-
-Create a run directory separate from the data:
+Create a separate workspace:
 
 ```bash
-dawe workbench init --source /path/to/data --model /path/to/checkpoint --out /path/to/dawe-run
+dawe workbench init --source DATA --model CHECKPOINT --out RUN
 ```
 
-This only writes local preparation files. Use the user's existing compute authorization. If none exists, finish data inspection and the concrete compute plan before asking for a budget immediately before a paid run. Record model and agent costs separately. Do not start a cloud GPU or leave one warm merely to prepare the workspace.
+This writes preparation files, not a model runner or an automatic search. Use the user's existing runtime and compute authorization. Finish local inspection and a concrete compute plan before requesting any missing paid-compute authorization. Include model loading, mapping, baseline generation, controls, candidate tries, exported-patch evaluation, and shutdown in the estimate. Track agent-model costs separately from GPU costs. No cloud GPU is needed just to prepare files.
 
-## Prepare and freeze the evidence
+Read [the investigation playbook](references/investigation.md) before starting model work. Write `PLAN.md` with the checkpoint/revision, harness difference, failure categories, primary metric, minimum repair gain, preservation tolerance, candidate cap, compute cap, generation settings, and reserved evaluation budget. Use existing acceptance criteria; resolve missing numeric thresholds before selecting candidates. Choose a bounded first experiment, not an unbounded search.
 
-Read [the data contract](references/data.md). Write a small source-specific normalizer, not a universal parser guessed from one sample. Preserve source references and how each target was established. Add repair examples and independent examples of behavior to preserve. Group alternate formats and repeated attempts at the same underlying task together. Select a task scorer before seeing patch results; exact text match is only appropriate when the full output really must match.
+## 2. Build trustworthy data and scoring
 
-Assign groups whose contents you inspected during preparation to development, using explicit splits when necessary. Freeze development and evaluation files with `dawe workbench freeze`. Keep the evaluation directory outside the editing workspace and off editing workers. Fit, inspect errors, and select candidates on development data only. Never place evaluation examples, predictions, aggregate scores, or source files containing evaluation items in the editor's context. This is a cooperative workflow: directory separation does not sandbox an agent with filesystem access. Record any earlier exposure honestly.
+Read [the data contract](references/data.md). Write and retain a source-specific normalizer and scorer. Separate protocol validity from semantic task success: valid XML with the wrong function or arguments is still a failure. Exercise the scorer on known-correct, known-wrong, truncated, and malformed outputs before using it to compare edits. Record counts and parser errors; empty or failed runs cannot score as success.
 
-## Diagnose before editing
+Group repeated attempts, old/new formats, and corrections of the same task together. Use development fit and validation groups for fitting and candidate selection; reserve separate evaluation groups with both repair and preservation cases. Data already inspected belongs in development. Freeze using `dawe workbench freeze`; it checks structure and grouping, not truth of labels. Hash the scorer and split manifests.
 
-Read [the lab guide](references/lab.md). Establish a generated baseline on repair and preservation examples, with the actual chat template and inference settings. Separate protocol/format failures from wrong answers and record task success as well as token likelihoods.
+Keep evaluation contents, predictions, and scores out of the editing context and worker. Do not mount raw files containing evaluation items on the editing worker. This separation is cooperative, not a filesystem sandbox. If evaluation information was already exposed, record what and when rather than claiming it was hidden.
 
-Locate concrete failing decisions. Use teacher-forced targets to compare gold next tokens, hidden states, and, when useful, gradients at those points. The bundled `scripts/probe.py` collects all-layer states at explicit target prefixes for supported Transformers text chat templates; inspect its token alignment checks and use a model-specific adapter when they fail. It is a local model job and can use substantial memory. Do not run it until compute is authorized. Pin the checkpoint/revision and environment in the run record.
+## 3. Reproduce and map the failing decisions
 
-Build a concise map: example/source ID → failing decision/token → state or gradient evidence → candidate tensor. Check whether the desired information exists in late states before choosing a readout edit. Gradient size alone does not prove causal location. Keep preservation states in the fitting constraints. Do not copy a published patch onto a different checkpoint.
+Read [the runtime and mapping guide](references/lab.md). Build a generation runner using the exact served checkpoint, chat template, tool serialization, stop rules, and decoding settings. Generate an unedited baseline on repair and preservation development cases; retain per-item outputs and scorer results. First rule out a template, parser, truncation, or runtime mismatch that should be fixed in software.
 
-## Write and try the edit
+Localize concrete decisions: premature stopping, malformed arguments, incorrect tool choice, or a missing opening token need different hypotheses. Compare paired old/new traces where available. Inspect teacher-forced next-token ranks, logits, hidden states, and selected gradients at those positions. Include successful continuation and genuine stopping examples, not just failures.
 
-Create `analysis/`, `edits/`, `tries/`, and `LOG.md` in the editing workspace. Explain the hypothesis in the log before each try. Derive closed-form edits (ridge regression, projections, SVD, constrained sparse writes) from development evidence. Analysis may use gradients; do not use an optimizer, gradient descent, LoRA training, or silently generated extra training data and call it the same method.
+The bundled `scripts/probe.py` collects all-layer states at explicit target prefixes for supported Transformers text chat templates. It does not generate baseline outputs, fit edits, or establish causality. Check token alignment; write a model-specific adapter when needed. Do not launch it outside the compute authorization.
 
-Use fresh source weights for each try. Save each edit as readable code and record the exact changed tensors and weight count after storage-dtype rounding. Inspect tied embeddings, normalization, quantization, and architecture before writing. Keep the source checkpoint intact. Capture changed tensors or an edited checkpoint in a format accepted by DAWE's patch tools.
+Produce `DIAGNOSIS.md` and a provenance map: source/example ID → failing decision and prefix → state/logit evidence → candidate tensor. Test whether the desired distinction generalizes across development groups. Probe accuracy and gradient magnitude are evidence for a hypothesis, not proof of causal location. If the model has no useful signal for a readout correction, change the bounded hypothesis or return a diagnosis.
 
-Track every model job, candidate, elapsed compute, and known cost against the agreed budget in `run.json` and a ledger. The local preparation commands do not enforce a cloud spending ceiling. Use provider limits or an external worker ledger when needed; stop before another job would exceed the authorized cap. A simple source scan is not a sandbox for agent code.
+## 4. Run the editing lab
 
-Generate and score each candidate on both repair and preservation development examples, including free-running contexts. Teacher-forced next-token improvements alone are not success. Keep the best candidate under the predeclared preservation tolerance. Stop at the try/budget cap, when a satisfactory candidate is found, or when the evidence no longer supports the hypothesis. A failed investigation is a valid outcome; do not spend indefinitely to force a patch.
+Maintain `analysis/`, `edits/`, `tries/`, `LOG.md`, and a compute ledger. Each try follows **hypothesis → derive → screen → generate → score → keep/reject**. Read the candidate and control procedures in [the investigation playbook](references/investigation.md).
 
-## Freeze, evaluate, and deliver
+Derive edits from development evidence using closed-form regression, projections, SVD, or constrained sparse writes as appropriate. Gradients may inform analysis; do not use an optimizer, gradient-descent training, or LoRA and call it the same procedure. Choose edit scale and regularization on development validation, not on evaluation results. The published -12/+8 targets are not defaults for a new model.
 
-Freeze the chosen patch and scorer before opening the evaluation set. Run baseline and patched inference with identical settings. Record per-item results, counts, repair gains, preservation regressions, and the data/split hashes. If you inspect evaluation failures and edit again, that split is now development data; use fresh evaluation examples or disclose the contamination.
+Start each independent candidate from fresh source weights. If composing edits, declare the composition and retain isolated component candidates. Record exact tensors, norm/rank or support constraints, seeds, numerical precision, and changed-value counts **after storage-dtype rounding**. Inspect tied embeddings and quantization before editing; never patch packed bytes blindly. Keep source weights intact.
 
-Package with the existing commands (install/use DAWE in the same environment):
+Use cheap decision-level screens to reject unsupported edits, then run free generation on both repair and preservation development cases. Better gold-token likelihood alone is not acceptance. Compare an unchanged/no-op baseline and controls appropriate to the mechanism: for a readout direction, budget a same-support/same-norm random edit and a matched constant-logit-bias control; for multiple components, test components separately. Mark omitted controls as not run and restrict causal claims accordingly. Controls are not automatically run by the CLI.
+
+Record every candidate and control, including rejected ones, with settings, commands, per-item results, denominators, errors, and compute used. Prefer the smallest passing edit under the agreed preservation tolerance. Stop at success, the try/compute cap, or a failed hypothesis. Reserve enough budget to test the exported artifact; a lab-only success is not a delivered tested patch.
+
+## 5. Freeze and verify the artifact
+
+Read [the evaluation and delivery protocol](references/evaluation.md) before final evaluation. Freeze the selected edit, scorer, settings, and acceptance criteria before opening evaluation data. Evaluate a baseline and the **checkpoint produced by applying the exported patch**, rather than reporting scores from only the in-memory candidate.
 
 ```bash
 dawe patch from-dense --source CHECKPOINT --dense changed-tensors.safetensors -o candidate.gpatch
@@ -61,6 +65,14 @@ dawe patch apply candidate.gpatch --source CHECKPOINT --out PATCHED_CHECKPOINT
 dawe patch restore candidate.gpatch --patched PATCHED_CHECKPOINT --out RESTORED_CHECKPOINT
 ```
 
-`changed-tensors.safetensors` contains the NEW complete values of changed tensors, not deltas. The public artifact is sparse and bound to the exact source checkpoint. Verify apply/restore before handing it over. Do not use `--fast` to bypass the full checkpoint identity check. For unsupported checkpoint layouts or quantized weights, report the limitation rather than modifying packed bytes blindly.
+`changed-tensors.safetensors` contains the NEW complete changed tensors, not deltas. Use full checkpoint identity checks; do not bypass them with `--fast`. Check apply/restore, unchanged tensors, and restored checkpoint identity. Reload the applied checkpoint in the intended compatible inference runtime before scoring it. Check actual tied-weight behavior after reload. Report unsupported layouts or runtime conversions rather than silently changing the source model.
 
-Deliver `REPORT.md`, the frozen `.gpatch` when one worked, the edit and normalizer/scorer code, development try logs, and evaluation results. State what ran, what did not, the remaining failures, and whether acceptance criteria passed. Keep private datasets and full checkpoints out of Git. Stop any GPU resources you started. Do not deploy a model, publish data, or make a repository public merely because a patch was generated.
+Evaluate repair and preservation separately, with identical baseline/patched settings, item IDs, valid counts, format/task metrics, regressions, and remaining failures. Paired per-item outcomes matter even when aggregate accuracy is unchanged. Use extra repetitions or uncertainty estimates when sampling or small score differences affect the conclusion, within the budget. If you inspect evaluation failures and revise the edit, that set becomes development; obtain fresh evaluation data or disclose the exposure.
+
+## 6. Deliver a reproducible outcome and stop
+
+Return `REPORT.md` with a clear verdict: accepted, rejected, or incomplete. Include the exact checkpoint identity; data, split, scorer and patch hashes; baseline/candidate/control matrix; repair gains and preservation regressions; compute used; and limitations. The [delivery protocol](references/evaluation.md) specifies the artifact record and reproduction commands.
+
+An accepted result includes the `.gpatch`, normalizer, scorer, inference and edit scripts, dependency versions, all try records, and per-item baseline/patched evaluation results. Supply exact apply, inference, score, restore, and reproduction commands with paths that exist. Keep private data/checkpoints out of Git; hand them back privately within the authorized environment.
+
+If the patch failed, return the investigation and its evidence, without labeling a failed candidate as a successful repair. If final inference was not run, call the result incomplete, not a tested patch. Stop GPU resources you started on success, failure, interruption, or budget exhaustion and record shutdown status. Do not stop unrelated infrastructure. Model deployment or publication is separate from producing this artifact.
