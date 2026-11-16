@@ -1,6 +1,6 @@
 # Use DAWE with your model and data
 
-Give a coding agent your traces, the exact model checkpoint, and a description of what is failing. The agent follows the [DAWE skill](../skills/dawe/SKILL.md) to investigate the failure, derive a small weight edit when the evidence supports one, and evaluate it against behavior you want to preserve.
+Give Astra/Fable your traces, the exact model checkpoint, and a description of what is failing. The agent follows the [DAWE skill](../skills/dawe/SKILL.md) to investigate the failure, derive a small weight edit when the evidence supports one, and evaluate it against behavior you want to preserve.
 
 The starting point is simple: open this repository in your coding agent and give it the data path, checkpoint path, and desired fix. It handles normalization, scoring, model inspection, editing, and evaluation. The sections below explain what happens behind that prompt; you do not need to carry out each preparation step yourself.
 
@@ -37,7 +37,7 @@ uv sync
 uv run dawe skill path
 ```
 
-Give your coding agent this prompt, replacing the paths and failure description:
+Give Astra/Fable this prompt, replacing the paths and failure description:
 
 ```text
 Read skills/dawe/SKILL.md and use it on my data.

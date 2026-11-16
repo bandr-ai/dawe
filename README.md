@@ -1,11 +1,18 @@
 # DAWE
 
-**Bring your data and model. Get a tested weight patch.**
+**Bring your data and model. Astra/Fable investigates failures, derives small weight edits, and delivers tested patches.**
+
+![Your data and model → Astra/Fable investigates, edits, and evaluates → a tested, reversible weight patch.](docs/assets/dawe-workflow.gif)
+
+[Static overview](docs/assets/dawe-workflow.png) · [Read the story](docs/WRITEUP.md)
 
 DAWE (Data-Attributed Weight Editing) is an agent skill for fixing model behavior with small weight edits. Give it logs, conversations,
 tool traces, or corrected examples, point it at your checkpoint, and describe what should change.
-The agent prepares the data, investigates the failure, derives candidate edits, and tests that the fix
-preserves behavior that already works.
+Astra/Fable is the editing agent; your checkpoint is the model it repairs. It prepares the data,
+investigates the failure, derives candidate edits, and tests that the fix preserves behavior that already works.
+
+One use case: your harness evolves after post-training, and the model breaks on the new reply format.
+[Read the story →](docs/WRITEUP.md)
 
 ## Use it
 
@@ -17,7 +24,7 @@ cd dawe
 uv sync
 ```
 
-Open the repo in your coding agent and give it this:
+Open the repo in Astra/Fable and give it this:
 
 ```text
 Read skills/dawe/SKILL.md and use DAWE.
@@ -78,14 +85,14 @@ Qwen3.5-4B, LoRA SFT on BFCL under harness `v1`; 204 held-out items, greedy, one
 
 The plan-first patch also uses XML development states; its XML result is not unseen-harness transfer.
 Single run, 204 items (about ±5 points), our own scorer rather than BFCL's, no unconditional-bias control yet. See
-[Limitations](docs/WRITEUP.md#limitations) before quoting these.
+[Limitations](docs/EXPERIMENT.md#limitations) before quoting these.
 
 ## Start here
 
 | I want to... | Go to |
 |---|---|
 | see the story from baseline to patch to evaluation | [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md) |
-| check what is and is not claimed | [docs/WRITEUP.md](docs/WRITEUP.md) |
+| check what is and is not claimed | [docs/EXPERIMENT.md](docs/EXPERIMENT.md) |
 | re-run it | [docs/REPRODUCE.md](docs/REPRODUCE.md) |
 | use or inspect a patch | [docs/PATCH_FORMAT.md](docs/PATCH_FORMAT.md), [release/](release/) |
 | read what the agents did | [sessions/](sessions/) |
@@ -128,7 +135,7 @@ which is not published. Run DAWE on your checkpoint to produce your own patch. S
 
 The most useful next step is an independent run on a different model or failure. Bring examples with
 trustworthy targets, include behavior to preserve, and report per-item baseline/patched results—even
-when no edit works. Share only data and weights you have permission to publish. The [write-up](docs/WRITEUP.md#not-yet-done)
+when no edit works. Share only data and weights you have permission to publish. The [experiment details](docs/EXPERIMENT.md#not-yet-done)
 lists the missing research controls; the [user guide](docs/USAGE.md) explains the run artifacts.
 
 ## Credits

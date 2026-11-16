@@ -150,7 +150,7 @@ After the agent submitted, we (not the agent) ran the 204 test items under all 1
 (`v6_all` and `v12_xml_opaque` also use the XML reply; `v12` was not used in fitting.)
 
 The train-to-held-out drop (93.9% to 85.8% on `v4`) is expected: the hidden states used to fit the edit come from items
-`sft_v1` was trained on. See [WRITEUP.md](WRITEUP.md#limitations) for what this evidence does and does not establish,
+`sft_v1` was trained on. See [WRITEUP.md](EXPERIMENT.md#limitations) for what this evidence does and does not establish,
 including the controls that have not been run (unconditional logit bias, second seed).
 
 ## 6. Do it yourself

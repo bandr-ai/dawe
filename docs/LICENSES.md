@@ -16,7 +16,7 @@ Covers: `dawe/`, `gpu/`, `scripts/`, `tests/`, `harnesses/`, `docs/`, `splits/`,
 
 No third-party source files are vendored or copied into this repository. `dawe/bfcl.py` contains our own
 simplified answer checker; it is not BFCL's official scorer and does not reuse its code (see
-[WRITEUP.md](WRITEUP.md#limitations)).
+[WRITEUP.md](EXPERIMENT.md#limitations)).
 
 ## 2. Dependencies (installed, not redistributed)
 
