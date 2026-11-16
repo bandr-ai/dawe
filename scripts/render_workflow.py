@@ -83,7 +83,7 @@ def render(stage, u):
     rect(d,(53,133,119,201),'#eef4ff','#bad0f1',3)
     for i, end in enumerate([105,97,108,90]):
         line(d,[(64,148+i*11),(end,148+i*11)],MUTED,2)
-    text(d,(132,148),'Failures',15,MUTED)
+    text(d,(132,148),'Data',15,MUTED)
     for r in range(3):
         for c in range(5):
             rect(d,(54+c*12,220+r*12,64+c*12,230+r*12),mix(BG,[BLUE,PURPLE,TEAL][(r+c)%3],.3+((r+c)%3)*.15))
