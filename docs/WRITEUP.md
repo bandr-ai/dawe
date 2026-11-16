@@ -133,15 +133,22 @@ measures the failure, and investigates candidate edits. A patch is returned when
 preservation checks pass; otherwise the report records what failed. The [user guide](USAGE.md)
 covers setup and patch commands.
 
-The generic workflow has not yet had an independent end-to-end run on another user's model.
-The worked experiment is the evidence available today: one checkpoint, one benchmark subset,
-and single runs. Test items were held out, but aggregate test scores appeared in the agents'
-briefs. Another training seed and further controls are still needed. See the
+## Testing on larger customer models
+
+We’re now testing DAWE with customers on [Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B)
+and [Muse Glimmer 30B](https://huggingface.co/meta-models/Muse-Glimmer-30B), with work extending
+to larger checkpoints up to roughly 100B parameters. These customer evaluations are ongoing;
+the results above are from the Qwen3.5-4B experiment, not the larger models. We’ll report the
+larger-model results once evaluation is complete.
+
+For now, the published measurements cover one checkpoint, one benchmark subset, and single runs.
+Test items were held out, but aggregate test scores appeared in the agents’ briefs. Another
+training seed and further controls are still needed. See the
 [full limitations](EXPERIMENT.md#limitations) before interpreting these results more broadly.
 
-The next experiment should test whether this repair procedure holds on another model and a
-different harness change. The practical question stays the same: when the harness evolves,
-how much of the adaptation can fit into a small, tested weight patch?
+The customer work tests whether the same procedure holds across models and harness changes.
+The practical question stays the same: when the harness evolves, how much of the adaptation can
+fit into a small, tested weight patch?
 
 ---
 
