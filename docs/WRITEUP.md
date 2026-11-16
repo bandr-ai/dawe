@@ -1,120 +1,118 @@
-# Your harness moved on. Can your model follow?
+# Ship a harness update. Ship a model patch too?
 
-You post-train a model for your agent. It learns the tools, follows the reply format, and works well
-in your evals. Then you ship a better harness.
+You post-train a model on your agent's traces. It works. Then you change the harness and things
+start breaking.
 
-Maybe tool calls now use XML. Maybe every reply needs a plan before the first action. The task has
-barely changed, but the model starts failing. A checkpoint that worked with yesterday's harness no
-longer works with today's.
+Maybe you move tool calls from JSON to XML. Maybe you ask the model to write a plan before calling
+a tool. Same task, slightly different setup. But the model you just trained doesn't quite follow.
 
-**DAWE asks whether some of those failures can be repaired with a small weight edit.** Bring your data
-and model. Astra/Fable investigates failures, derives small weight edits, and delivers tested patches.
+Do you train it again every time?
 
-![DAWE: your data and model flow to Astra/Fable for investigation, weight editing, evaluation, and a tested patch.](assets/dawe-workflow.gif)
+We wanted to try something smaller: give an agent the failing examples and the model's weights.
+Let it figure out what broke and see if a small edit can fix it.
 
-## The harness is part of what the model learns
+That's **DAWE**. Bring your data and model. **Astra/Fable investigates the failure and tries to
+produce a tested weight patch.**
 
-A harness is the code around a model: the tools it can use, how they are described, the instructions
-it receives, and how its replies are read. Post-training happens inside that arrangement. We should
-not assume the resulting behavior will survive every change to it.
+![Your data and model → Astra/Fable → tested patch.](assets/dawe-workflow.gif)
 
-Here is a small example. A request needs two tool calls. Under the old JSON format, the model makes
-both. Switch the reply format to XML and it writes the first call, then ends its turn.
+## What actually broke?
+
+The harness is everything around the model: tool definitions, instructions, how calls are formatted,
+how replies get parsed. A model trained inside one setup might struggle when that setup changes.
+
+In our experiment, a request needed two tool calls. The model could make both in the old JSON
+format. Switch to XML and it made the first call, then stopped.
 
 ```text
-What the new harness needs       What the model does
+Needed                          Got
 
 <tool_call>first</tool_call>     <tool_call>first</tool_call>
 <tool_call>second</tool_call>    [ends turn]
 ```
 
-The syntax changed, and a useful behavior broke. The question becomes more specific: at the moment
-it stops, is the model missing the information that another call is needed, or is that information
-present but losing to the end-of-turn token?
+That felt like a useful place to start. Did the model lose the ability to make the second call?
+Or was it just choosing to stop too early?
 
-That distinction gives us something to investigate.
+## Let Astra/Fable look inside
 
-## Give the editing agent evidence
+The work on [weight-space programming](https://rikiyat.github.io/blog/weight-space-programming/)
+got us thinking about this. An agent can inspect another model's weights and write code to change
+them. Could we use that to help a post-trained model follow a new harness?
 
-Weight-space programming explores how an LLM can read and change another network's weights. We take
-that idea into one practical setting: **a post-trained model adapting to an evolving harness**.
+Astra/Fable is the editing agent here. The model being repaired was Qwen3.5-4B, post-trained on
+function-calling examples under a JSON harness.
 
-The editing agent—Astra/Fable—gets the checkpoint, examples of the failure, trustworthy target
-behavior, and examples of behavior that should keep working. The model being repaired is a separate
-model; in our worked experiment, it was Qwen3.5-4B.
+We gave the agent failing examples, the expected behavior, and examples that should keep working.
+It could run the model and inspect its internal states within a limited compute budget.
 
-The workflow connects a failure to a place in the model:
+The loop was pretty simple:
 
-1. Generate replies and identify exactly where they go wrong.
-2. Inspect model states at those decisions.
-3. Derive a small candidate edit from that evidence.
-4. Generate again and check both the repair and the behavior to preserve.
+1. Find the decision where the reply goes wrong.
+2. Inspect the model there and derive a candidate weight edit.
+3. Run it again. Check whether the failure is fixed and the old behavior still works.
 
-The agent has tools, model runs, and a limited budget. It writes analysis and edit code. It does not
-run an optimizer-based fine-tuning loop. A better next-token score is only a clue; the patched model
-has to produce better replies.
+There was no gradient-descent fine-tuning loop. The agent wrote code to calculate the edits directly
+from the examples. And a better token score wasn't enough. We checked the replies it generated.
 
-## In this case, the model knew more than it said
+## A few weights made a difference
 
-We started with Qwen3.5-4B, post-trained on function-calling examples in a JSON harness. We evaluated
-twelve harness variants. Renames and prompt changes caused relatively small differences. XML calls
-and plan-first replies caused much larger drops.
+We tried twelve harness variants. Renaming things and changing prompts had smaller effects.
+XML calls and plan-first replies broke much more.
 
-For the XML failure, later model states contained a strong signal separating “another call follows”
-from “the turn should end.” Yet the model still selected the end-of-turn token too early.
+For XML, the model's later internal states still carried a strong signal about whether another call
+should follow. But it picked the end-of-turn token anyway.
 
-The agent used those states to calculate a correction to the weight row for that token. The intended
-change was simple: make ending the turn less likely when another call should follow, while leaving
-real stopping points and the old format alone. The plan-first patch also adjusted the row for the
-opening `<` token.
+The agent used those states to calculate an edit to that token's weight row. The idea: stop less
+often when another call is needed, while keeping real stopping points working. For plan-first
+replies, it also edited the row for the opening `<` token.
 
-These were closed-form fits, derived from the examples rather than learned through gradient-descent
-training. The XML patch changed 2,557 stored weight values in one row. The plan-first patch changed
-5,064 values across two rows. The [technical account](EXPERIMENT.md#what-the-patches-are) explains the
-fit, the tied embeddings, and why the readout explanation is an interpretation rather than a causal
-proof.
+The XML patch changed **2,557 weight values in one row**. Plan-first changed **5,064 across two rows**.
+That's the whole edit. The [technical write-up](EXPERIMENT.md#what-the-patches-are) covers the fit and
+why this explanation of the internal states is still an interpretation, rather than a causal proof.
 
-## Did the patched model work?
+Here are the results on 204 held-out items, with the same generation settings before and after:
 
-We tested on 204 held-out items, using the same generation settings before and after the edit.
-
-| Reply format | Before the patch | After its patch | Changed weights |
+| Harness change | Before | After its patch | Weights changed |
 |---|---:|---:|---:|
 | XML tool calls | 73.5% | 85.8% | 2,557 |
-| Plan, then tool calls | 20.1% | 88.2% | 5,064 |
+| Plan before tool calls | 20.1% | 88.2% | 5,064 |
 
-Old-format accuracy stayed at **87.7%** with either patch. A same-sized random edit to the XML patch's
-row reduced XML accuracy to 68.1%, so simply perturbing that row did not reproduce the improvement.
+Accuracy on the old format stayed at **87.7%** with either patch.
 
-Retraining from the base model on each new harness reached 89.7% for XML and 88.7% for plan-first.
-The XML edit fell short; the plan-first edit was close in this run. This small experiment does not
-establish equivalence to retraining.
+A random edit to the same XML row, matched in norm, dropped accuracy to 68.1%. So just nudging that
+row wasn't enough. Retraining from the base model on the new harness reached 89.7% for XML and
+88.7% for plan-first. The XML patch didn't get all the way there. Plan-first came close in this run.
 
-The patches can be stored as roughly 24 KB and 44 KB files containing the changed positions and their
-old/new values. Each is bound to the exact checkpoint it repairs, can be inspected, and can be undone.
-The reported model scores came from the original lab edits; we verified the sparse conversion and
-apply/restore machinery, but have not rerun held-out inference through the exported-patch path.
+The patches fit into roughly **24 KB and 44 KB** files. They record the changed positions and the
+old/new values, so you can inspect or undo them. Each patch belongs to the exact checkpoint it was
+made for.
 
-## What this result means
+One detail matters: these scores came from the original lab edits. We checked that converting them
+to sparse patch files and applying/restoring them works, but haven't rerun held-out generation
+through that exported-patch path.
 
-It is possible for a harness change to expose a narrow failure that a small weight edit can repair.
-In this experiment, the editing agent used traces and model states to find such an edit while
-preserving old-format accuracy on the evaluated items.
+## So what can we say so far?
 
-There is still a lot we do not know. This is one model, one benchmark subset, and single runs. We use
-our own scorer. The test items were held out, but aggregate test scores appeared in the agents'
-briefs. Important controls—including a constant logit-bias comparison and another training seed—are
-missing. The [full limitations](EXPERIMENT.md#limitations) and [results](../RESULTS.md) are available
-alongside the code.
+A harness change broke this model. Astra/Fable found small weight edits that recovered much of the
+lost performance, with old-format accuracy unchanged on our evaluated items. That's encouraging.
 
-We have also **not** demonstrated taking the difference between two trained models and transferring
-it to a model trained on another task. These edits use new-harness examples and are specific to their
-source checkpoint. Shipping a harness release with patches for many models is a direction to test.
+It's also one model, one benchmark subset, single runs, and our own scorer. Although test items were
+held out, aggregate test scores appeared in the agents' briefs. We still need controls like a
+constant logit bias and another training seed. The [limitations](EXPERIMENT.md#limitations) are in
+the repo alongside the [results](../RESULTS.md).
 
-## Bring your own failure
+Our original idea was bigger: take the difference between models trained under two harness versions
+and transfer that difference to another task's model. **We haven't shown that.** These patches used
+new-harness examples and were derived for one checkpoint.
 
-DAWE is available as a [repository skill](../skills/dawe/SKILL.md). Open the repo in Astra/Fable and give
-it the data path, checkpoint path, and the behavior you want changed:
+But shipping a harness release with model patches is still the thing we want to explore. This was
+a first test of whether a small repair could work at all.
+
+## Try it on your model
+
+For now, DAWE is a [skill in the repo](../skills/dawe/SKILL.md). Open it in Astra/Fable and give it
+something like this:
 
 ```text
 Read skills/dawe/SKILL.md and use DAWE.
@@ -124,18 +122,20 @@ Inspect the data first and propose a compute budget before paid work.
 Return the tested patch, evaluation results, and scripts.
 ```
 
-The agent handles source-specific preparation, diagnosis, editing, and evaluation. It needs accessible
-weights and reliable targets or a verifier. It returns a report and, when an edit passes the checks,
-a `.gpatch` for your exact model. An unsuccessful investigation returns its findings. The [user guide](USAGE.md)
-explains setup and applying a patch. The generic workflow still needs an independent end-to-end run
-on another user's model; the worked experiment is the evidence we have today.
+You need accessible weights and examples with reliable targets or a way to check the answers.
+The agent investigates, tries edits, and evaluates them. If an edit passes the checks, you get a
+`.gpatch` for your checkpoint. If it doesn't, you get the findings.
 
-The next useful test is a different model, a different harness change, and a clearly measured outcome.
-If the harness keeps evolving, we want to understand when a model can follow with a patch.
+The [user guide](USAGE.md) explains setup and applying the patch. We still need an independent
+end-to-end run of this workflow on someone else's model. The experiment above is what we've
+measured so far.
+
+If your harness changed and your model started doing something weird, that's the kind of failure
+we'd like to try next.
 
 ---
 
 Inspired by [Sparks of Weight-Space Programming](https://rikiyat.github.io/blog/weight-space-programming/)
-and the work on [Deletion Tuning](https://arxiv.org/abs/2611.10866). The harness experiment and its
-measurements are our focus here. See the [experiment details](EXPERIMENT.md), [walkthrough](WALKTHROUGH.md),
-and [reproduction instructions](REPRODUCE.md) for the complete record.
+and [Deletion Tuning](https://arxiv.org/abs/2611.10866). Our focus here is the harness experiment.
+The [experiment details](EXPERIMENT.md), [walkthrough](WALKTHROUGH.md), and
+[reproduction instructions](REPRODUCE.md) have the full record.
