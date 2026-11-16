@@ -16,7 +16,7 @@ results on one model and 204 held-out items; they suggest a useful repair is pos
 controls still needed.
 
 **DAWE packages this investigation as a repository skill. Bring your data and model. Astra/Fable
-investigates failures, derives small weight edits, and delivers tested patches.**
+investigates your data, derives small weight edits, and delivers tested patches.**
 
 ![Your data and model → Astra/Fable → tested patch.](assets/dawe-workflow.gif)
 

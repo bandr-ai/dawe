@@ -1,6 +1,6 @@
 # DAWE
 
-**Bring your data and model. Astra/Fable investigates failures, derives small weight edits, and delivers tested patches.**
+**Bring your data and model. Astra/Fable investigates your data, derives small weight edits, and delivers tested patches.**
 
 ![Your data and model → Astra/Fable investigates, edits, and evaluates → a tested, reversible weight patch.](docs/assets/dawe-workflow.gif)
 
