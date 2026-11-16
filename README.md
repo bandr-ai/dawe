@@ -1,14 +1,69 @@
-# geodesic
+# DAWE
 
-Edit model weights instead of retraining. First use: a harness change (new call format, plan-first replies, ...)
-breaks a fine-tuned model; a small weight edit found by an agent from paired traces repairs it.
+**Bring your data and model. Get a tested weight patch.**
 
-**This release is a reproducible experiment, not a product.** It contains the harnesses, the split, the scorer, the
-baseline recipe, the data-to-weight map code, the bounded agent lab, everything the agents wrote, a sparse and
-checkpoint-bound patch format with apply and restore tools, and the numbers. Read
-[docs/WRITEUP.md](docs/WRITEUP.md) for what was found and, just as important, what was not shown.
+DAWE (Data-Attributed Weight Editing) is an agent skill for fixing model behavior with small weight edits. Give it logs, conversations,
+tool traces, or corrected examples, point it at your checkpoint, and describe what should change.
+The agent prepares the data, investigates the failure, derives candidate edits, and tests that the fix
+preserves behavior that already works.
 
-## The result in one table
+## Use it
+
+Clone the repo and install the local tools (Python 3.11+ and uv):
+
+```bash
+git clone https://github.com/bandr-ai/dawe.git
+cd dawe
+uv sync
+```
+
+Open the repo in your coding agent and give it this:
+
+```text
+Read skills/dawe/SKILL.md and use DAWE.
+
+My data is in /path/to/data.
+My model checkpoint is /path/to/checkpoint.
+Fix: [describe the behavior you want to change].
+Preserve: [describe what already works].
+
+Handle the data preparation and evaluation. Inspect the files first and
+propose a compute budget before paid work. Return a tested patch, the
+results, and the scripts used to produce it. Stop GPU resources when done.
+```
+
+That's the starting point. You don't need to choose layers, label decision tokens, or convert your logs
+by hand. The agent adapts the workflow to your data and model. It needs accessible weights and reliable
+correct answers or a verifier; it asks for missing essentials after inspecting what you supplied.
+
+You get a report, evaluation results, and—when an edit passes the checks—a checkpoint-bound `.gpatch`.
+Apply it to a new checkpoint directory:
+
+```bash
+uv run dawe patch apply /path/to/fix.gpatch --source /path/to/checkpoint --out /path/to/patched-model
+```
+
+Use that directory with your compatible inference runtime. Keep the original checkpoint; the patch can
+also be undone with `dawe patch restore`.
+
+DAWE is experimental. It accepts different data sources through the agent, but a successful small edit
+is not guaranteed for every failure. The worked experiment below repaired structural output failures;
+it does not establish general reasoning or knowledge repair.
+
+[Full user guide](docs/USAGE.md) · [The skill](skills/dawe/SKILL.md) · [No-GPU example](examples/dawe/README.md)
+
+## Install the skill elsewhere
+
+You can also copy the bundled skill into your agent's configured skills directory:
+
+```bash
+uv run dawe skill install --dest /path/to/your/skills
+```
+
+For explicit local preparation, use `dawe workbench init` and `dawe workbench freeze`; the agent can run
+these for you. Preparation starts no compute. Keep private data, runs, and checkpoints out of Git.
+
+## What we have demonstrated
 
 Qwen3.5-4B, LoRA SFT on BFCL under harness `v1`; 204 held-out items, greedy, one run each
 ([RESULTS.md](RESULTS.md)):
@@ -18,8 +73,10 @@ Qwen3.5-4B, LoRA SFT on BFCL under harness `v1`; 204 held-out items, greedy, one
 | fine-tuned on `v1` | 87.7 | 73.5 | 20.1 | none |
 | + agent patch for `v4` | 87.7 | 85.8 | 64.2 | 2,557 |
 | + agent patch for `v11` | 87.7 | 85.8 | 88.2 | 5,064 |
-| retrain on the new harness only | 73.0 / 90.2 | 89.7 | 88.7 | all |
+| retrain from base on XML only | 73.0 | 89.7 | not run | all |
+| retrain from base on plan-first only | 90.2 | 82.8 | 88.7 | all |
 
+The plan-first patch also uses XML development states; its XML result is not unseen-harness transfer.
 Single run, 204 items (about ±5 points), our own scorer rather than BFCL's, no unconditional-bias control yet. See
 [Limitations](docs/WRITEUP.md#limitations) before quoting these.
 
@@ -35,81 +92,44 @@ Single run, 204 items (about ±5 points), our own scorer rather than BFCL's, no 
 | understand the lab's guarantees | [docs/LAB.md](docs/LAB.md) |
 | know the licenses and model/dataset terms | [docs/LICENSES.md](docs/LICENSES.md) |
 
-## Quick start (no GPU)
+## Try the tooling without a GPU
 
 ```bash
 uv sync --extra dev
+uv run dawe fetch
 uv run pytest -q
-uv run geodesic fetch                  # BFCL v3 simple/multiple/parallel, pinned revision, SHA-256 checked
-uv run geodesic splits                 # the 595/204 split matches splits/bfcl_v3_split.json
-uv run geodesic roundtrip              # correct answers survive every harness
-uv run geodesic harnesses              # the 12 harness versions
+uv run dawe splits
 uv run python examples/patch_lifecycle.py
 ```
 
-## Patches
+This checks the pinned dataset, frozen split, harness roundtrips, and sparse patch lifecycle. One known
+native-format label mismatch (`simple_307`) is a strict expected failure in the tests; an unexpected pass
+also fails CI. `uv run dawe roundtrip` prints the full diagnostic and still exits nonzero on that case.
+See [reproduction](docs/REPRODUCE.md) for the research runs and [the synthetic example](examples/dawe/README.md)
+for local run preparation.
 
-A patch is sparse (changed indices and values: tens of KB, not the GB-sized tensor it edits), names the exact checkpoint it
-was made for by content hash, refuses any other, writes a new directory, and can be undone byte for byte:
+## What's in a patch?
+
+A `.gpatch` stores changed weight indices and their old/new values, bound to the exact checkpoint by
+content hashes. It refuses other checkpoints, applies into a new directory, and supports byte-for-byte
+restoration. The patch tools use the Python standard library; model diagnosis and editing need a
+separately configured model runtime.
 
 ```bash
-geodesic patch inspect x.gpatch
-geodesic patch apply   x.gpatch --source CHECKPOINT --out NEW_DIR
-geodesic patch restore x.gpatch --patched NEW_DIR   --out ORIGINAL_DIR
+uv run dawe patch inspect /path/to/fix.gpatch
+uv run dawe patch apply /path/to/fix.gpatch --source CHECKPOINT --out PATCHED
+uv run dawe patch restore /path/to/fix.gpatch --patched PATCHED --out RESTORED
 ```
 
-Standard library only; the patch tools do not import torch. The two released patches (23.6 KB and 43.7 KB) are in
-[`release/patches/`](release/patches/) with their SHA-256 in [release/README.md](release/README.md); the checkpoint they apply
-to is not published (see [docs/LICENSES.md](docs/LICENSES.md)).
+The two [research patches](release/) are 23.6 KB and 43.7 KB. They require our exact research checkpoint,
+which is not published. Run DAWE on your checkpoint to produce your own patch. See [the format guide](docs/PATCH_FORMAT.md).
 
-## Layout
+## Contribute
 
-```
-geodesic/        harnesses, BFCL loader and scorer, dataset builders, map reader, splits, pins, patch format
-harnesses/       v1 ... v12 as TOML (v1 is the baseline; each change is one or two fields)
-splits/          the train/test split as a file
-gpu/             Modal jobs: SFT, generation, maps (app.py); the agent lab (lab.py)
-scripts/lab.py   the agent's command-line tool
-sessions/        briefs, context, analysis, edits, tries, notes, logs for each agent session, plus the random control
-release/         patches and the lineage of the checkpoint they apply to
-repro/           frozen environments (to be recorded)
-examples/        runnable demos
-docs/            write-up, walkthrough, reproduction, patch format, lab, licenses
-```
-
-## Harness versions (`harnesses/`)
-
-| Version | Change from v1 |
-|---|---|
-| `v1` | Baseline: JSON schema in system prompt, JSON `tool_calls` output |
-| `v2_rename` | Tool names: `math.factorial` -> `tool_math_factorial` |
-| `v3_schema` | camelCase argument names, tools shown as signatures |
-| `v4_format` | XML `<tool_call>` blocks instead of JSON |
-| `v5_prompt` | New system prompt, tools moved into the user message |
-| `v6_all` | All of the above |
-| `v7_opaque` | Tool names -> per-item IDs (`t_3f9a`), arguments -> `a1, a2, ...` |
-| `v8_native` | Qwen3.5's own tool format (`<tool_call><function=...><parameter=...>`) |
-| `v9_pycall` | Python call syntax `[f(x=1)]` |
-| `v10_positional` | Positional arguments `[f(1, 2)]` |
-| `v11_plan` | Reply must start with `<plan>...</plan>`, then the JSON calls |
-| `v12_xml_opaque` | v4 XML plus v7 opaque names |
-
-Scoring always happens in BFCL's own names. A call using a name the current harness doesn't offer fails, even if it was the
-right name under an older harness. `simple_363` is skipped: its answer calls a function the item doesn't offer.
-
-## Data and split
-
-BFCL v3 simple/multiple/parallel only (799 items, 798 usable), from a pinned dataset revision. Split 75/25 by a hash of the
-item id (`sha256(id) mod 100 < 25` is test). Train = SFT on `v1` and everything the
-agents saw; test = held-out items under every harness.
-
-## Commands
-
-```
-geodesic fetch | splits [--write] | harnesses | render <harness> <id> | roundtrip
-geodesic build-sft [--harness H] | build-eval | build-pairs A B | map-summary MAP.json | report | score preds.jsonl
-geodesic patch create | from-dense | inspect | apply | restore | verify
-```
+The most useful next step is an independent run on a different model or failure. Bring examples with
+trustworthy targets, include behavior to preserve, and report per-item baseline/patched results—even
+when no edit works. Share only data and weights you have permission to publish. The [write-up](docs/WRITEUP.md#not-yet-done)
+lists the missing research controls; the [user guide](docs/USAGE.md) explains the run artifacts.
 
 ## Credits
 

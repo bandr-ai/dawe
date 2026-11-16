@@ -1,7 +1,7 @@
 import pytest
 
-from geodesic import bfcl
-from geodesic.harness import Harness, available, parse_calls, render, target, to_bfcl
+from dawe import bfcl
+from dawe.harness import Harness, available, parse_calls, render, target, to_bfcl
 
 ITEM = bfcl.Item(
     id="t0",

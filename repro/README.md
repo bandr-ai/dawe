@@ -15,5 +15,5 @@ used images built then; Modal caches images, so they are probably the same, but 
 the generation image resolves `transformers==5.17.0` (pulled in by vLLM 0.31.0), not the 5.20.2 used for training, so generation and
 training used different `transformers` versions.
 
-Top-level pins live in [`geodesic/pins.py`](../geodesic/pins.py); the checkpoint lineage is in
+Top-level pins live in [`dawe/pins.py`](../dawe/pins.py); the checkpoint lineage is in
 [`release/lineage_sft_v1.json`](../release/lineage_sft_v1.json).

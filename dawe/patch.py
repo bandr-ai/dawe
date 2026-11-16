@@ -7,12 +7,12 @@ tokenizer hashes), so applying it to any other checkpoint is refused, and it can
 Pure standard library: no torch, no numpy. Weights are treated as raw bytes, so any dtype works.
 Format description: docs/PATCH_FORMAT.md.
 
-    geodesic patch create    --source CKPT --edited CKPT -o x.gpatch
-    geodesic patch from-dense --source CKPT --dense old_patch.safetensors -o x.gpatch
-    geodesic patch inspect   x.gpatch
-    geodesic patch apply     x.gpatch --source CKPT --out NEW_DIR
-    geodesic patch restore   x.gpatch --patched NEW_DIR --out ORIGINAL_DIR
-    geodesic patch verify    x.gpatch DIR --expect source|result
+    dawe patch create    --source CKPT --edited CKPT -o x.gpatch
+    dawe patch from-dense --source CKPT --dense old_patch.safetensors -o x.gpatch
+    dawe patch inspect   x.gpatch
+    dawe patch apply     x.gpatch --source CKPT --out NEW_DIR
+    dawe patch restore   x.gpatch --patched NEW_DIR --out ORIGINAL_DIR
+    dawe patch verify    x.gpatch DIR --expect source|result
 """
 
 from __future__ import annotations
@@ -31,6 +31,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Sequence
 
+# Keep v1 wire identifiers stable so published patches remain readable after the rename.
 FORMAT = "geodesic-patch"
 VERSION = 1
 PROVENANCE_FILE = "geodesic_applied.json"
@@ -362,7 +363,7 @@ def load_patch(path: Path | str) -> Patch:
     sh = read_header(path)
     raw = sh.metadata.get("geodesic_patch")
     if raw is None:
-        raise PatchError(f"{path.name}: not a geodesic patch (no manifest)")
+        raise PatchError(f"{path.name}: not a dawe patch (no manifest)")
     manifest = json.loads(raw)
     if manifest.get("format") != FORMAT or manifest.get("version") != VERSION:
         raise PatchError(f"{path.name}: unsupported patch format {manifest.get('format')}/{manifest.get('version')}")
@@ -648,7 +649,7 @@ def _prepare_out(src: Path, out: Path) -> Path:
     if out.exists() and (not out.is_dir() or any(out.iterdir())):
         raise PatchError(f"{out} already exists and is not empty")
     out.parent.mkdir(parents=True, exist_ok=True)
-    tmp = out.parent / f".{out.name}.geodesic-tmp"
+    tmp = out.parent / f".{out.name}.dawe-tmp"
     if tmp.exists():
         shutil.rmtree(tmp)
     tmp.mkdir()
@@ -775,7 +776,7 @@ def _lineage(a: argparse.Namespace) -> dict | None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(prog="geodesic patch", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(prog="dawe patch", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     def common_create(p: argparse.ArgumentParser) -> None:

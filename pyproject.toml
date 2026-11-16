@@ -1,7 +1,7 @@
 [project]
-name = "geodesic"
+name = "dawe"
 version = "0.1.0"
-description = "Edit model weights instead of retraining. First use: fix a fine-tuned model after a harness change."
+description = "An agent skill that turns your data and model failures into tested weight patches."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
@@ -13,11 +13,14 @@ gpu = ["modal"]  # launches the jobs in gpu/ and the agent lab; the jobs install
 dev = ["pytest>=8", "safetensors", "numpy"]  # the last two only cross-check our stdlib safetensors code
 
 [project.urls]
-Repository = "https://github.com/bandr-ai/geodesic"
+Repository = "https://github.com/bandr-ai/dawe"
 
 [project.scripts]
-geodesic = "geodesic.cli:main"
+dawe = "dawe.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel.force-include]
+"skills/dawe" = "dawe/_skills/dawe"

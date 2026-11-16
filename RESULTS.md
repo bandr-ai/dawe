@@ -1,10 +1,10 @@
 # Results
 
-Held-out BFCL test split (204 items; 48 parallel), scored with our own matcher (`geodesic/bfcl.py`), not BFCL's official evaluator. Greedy decoding, thinking off. One run each.
+Held-out BFCL test split (204 items; 48 parallel), scored with our own matcher (`dawe/bfcl.py`), not BFCL's official evaluator. Greedy decoding, thinking off. One run each.
 
 "Held-out" means the agents never saw test items or per-item predictions. The agent briefs did quote aggregate test numbers; see [docs/LAB.md](docs/LAB.md#what-the-agents-were-told-about-the-test-set). At n=204 the 95% interval on a single accuracy is about ±4 to 6 points. Read this with [docs/WRITEUP.md](docs/WRITEUP.md#limitations).
 
-Provenance: these tables were produced by `geodesic report` from `runs/preds_*.jsonl`, which are not committed yet, so they cannot be regenerated from this repository alone. The only edit since is layout (column width); no number was changed. The `v1`, `v4_format`, `v4` parallel and `v6_all` columns for `sft_v1`, `dawe_s1_eos12`, the random control, `ceiling_v4_format` and the shim also agree with the maintainers' own earlier write-up of these runs (2026-11-12 and 2026-11-15). The `_DE` suffix in `dawe_s1_eos12_DE` is a file-name suffix from a later run of the s1 patch on `v11_plan` and `v12_xml_opaque`.
+Provenance: these tables were produced by `dawe report` from `runs/preds_*.jsonl`, which are not committed yet, so they cannot be regenerated from this repository alone. The only edit since is layout (column width); no number was changed. The `v1`, `v4_format`, `v4` parallel and `v6_all` columns for `sft_v1`, `dawe_s1_eos12`, the random control, `ceiling_v4_format` and the shim also agree with the maintainers' own earlier write-up of these runs (2026-11-12 and 2026-11-15). The `_DE` suffix in `dawe_s1_eos12_DE` is a file-name suffix from a later run of the s1 patch on `v11_plan` and `v12_xml_opaque`.
 
 Rows: `base` = Qwen3.5-4B; `sft_v1` = LoRA SFT on v1; `ceiling_X` = SFT directly on harness X (retraining); `dawe_*` = sft_v1 + agent-written weight patch; `dawe_control_rand_eos` = same-norm random edit to the same row as the v4 patch; `sft_v1 + shim` = a lossless format translator (v1 score everywhere).
 

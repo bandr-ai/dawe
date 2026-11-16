@@ -8,13 +8,13 @@ Checked on 2026-11-16 against the Hugging Face and PyPI metadata for the exact r
 ## 1. This repository's code: Apache-2.0
 
 [`LICENSE`](../LICENSE) is the unmodified Apache License 2.0 text. [`NOTICE`](../NOTICE) names the copyright
-holder as "The Geodesic authors". Replace that with the legal owner (person or organization) before
+holder as "The DAWE authors". Replace that with the legal owner (person or organization) before
 publishing if it should be a specific entity.
 
-Covers: `geodesic/`, `gpu/`, `scripts/`, `tests/`, `harnesses/`, `docs/`, `splits/`, `sessions/` (see item 6),
+Covers: `dawe/`, `gpu/`, `scripts/`, `tests/`, `harnesses/`, `docs/`, `splits/`, `sessions/` (see item 6),
 `release/`, `repro/`.
 
-No third-party source files are vendored or copied into this repository. `geodesic/bfcl.py` contains our own
+No third-party source files are vendored or copied into this repository. `dawe/bfcl.py` contains our own
 simplified answer checker; it is not BFCL's official scorer and does not reuse its code (see
 [WRITEUP.md](WRITEUP.md#limitations)).
 
@@ -22,7 +22,7 @@ simplified answer checker; it is not BFCL's official scorer and does not reuse i
 
 | Package | Pinned | Used by | License (PyPI metadata unless noted) | Compatible with Apache-2.0 |
 |---|---|---|---|---|
-| *(none)* | | `geodesic` itself, including `geodesic patch` | standard library only | n/a |
+| *(none)* | | `dawe` itself, including `dawe patch` | standard library only | n/a |
 | pytest | 9.2.0 | tests | MIT | yes |
 | safetensors | 0.8.0 | tests (cross-check of our file reader/writer) | Apache-2.0 (classifier) | yes |
 | numpy | 2.5.4 | tests | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | yes |
@@ -64,8 +64,8 @@ Open items for the maintainers:
 |---|---|---|
 | Berkeley Function Calling Leaderboard v3 (simple, multiple, parallel), `gorilla-llm/Berkeley-Function-Calling-Leaderboard` @ `61fc0608…` | Apache-2.0 | dataset card front matter at that revision |
 
-- The data files are **not** in this repository. `geodesic fetch` downloads them from the pinned revision and
-  checks their SHA-256 (`geodesic/pins.py`).
+- The data files are **not** in this repository. `dawe fetch` downloads them from the pinned revision and
+  checks their SHA-256 (`dawe/pins.py`).
 - Excerpts that *are* in the repository: `sessions/s1/context/paired_examples.md`,
   `sessions/s2/context/example_v11_plan.md` (a few BFCL items rendered under each harness), and
   `sessions/*/tries/*.json`, `sessions/*/context/baseline_train.json` (train-item ids, model outputs on them).

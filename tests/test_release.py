@@ -6,10 +6,32 @@ from pathlib import Path
 
 import pytest
 
-from geodesic import bfcl, pins, splits
+from dawe import bfcl, pins, splits
+from dawe.cli import _roundtrip
+from dawe.harness import Harness, available
 
 ROOT = Path(__file__).resolve().parent.parent
-needs_data = pytest.mark.skipif(bool(bfcl.verify_data()), reason="run `geodesic fetch` first")
+needs_data = pytest.mark.skipif(bool(bfcl.verify_data()), reason="run `dawe fetch` first")
+
+
+@needs_data
+@pytest.mark.parametrize("name", available())
+def test_gold_roundtrips(name):
+    items = bfcl.load_all()
+    # Exercise this one known label/format mismatch separately as a strict xfail below.
+    if name == "v8_native":
+        items = [item for item in items if item.id != "simple_307"]
+    ok, bad = _roundtrip(Harness.load(name), items)
+    assert not bad, (name, bad)
+    assert ok == len(items)
+
+
+@needs_data
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="simple_307: boolean gold venue conflicts with native string schema")
+def test_native_optional_boolean_gold_roundtrip():
+    item = next(item for item in bfcl.load_all() if item.id == "simple_307")
+    ok, bad = _roundtrip(Harness.load("v8_native"), [item])
+    assert ok == 1 and not bad
 
 
 def test_split_rule_is_the_documented_one():
@@ -51,7 +73,7 @@ def test_pin_tables_in_docs_agree():
 
 
 def test_released_patches_match_their_checksums_and_notes():
-    from geodesic import patch as gp
+    from dawe import patch as gp
 
     d = ROOT / "release" / "patches"
     for line in (d / "SHA256SUMS").read_text().splitlines():
