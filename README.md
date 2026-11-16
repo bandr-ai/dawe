@@ -31,6 +31,8 @@ geodesic workbench init --source /path/to/logs --model /path/to/checkpoint --out
 
 Preparation is local and starts no compute. The agent adapts the user's data/runtime; the original Modal lab remains BFCL-specific. See [the skill](skills/dawe/SKILL.md) and [the no-GPU example](examples/dawe/README.md). Keep private runs, data, and checkpoints out of Git.
 
+For the complete user workflow—what to supply, the agent prompt, what happens during a run, and how to apply the result—read [Use DAWE with your model and data](docs/USAGE.md).
+
 ## The result in one table
 
 Qwen3.5-4B, LoRA SFT on BFCL under harness `v1`; 204 held-out items, greedy, one run each

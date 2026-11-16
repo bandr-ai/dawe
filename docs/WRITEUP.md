@@ -6,6 +6,33 @@ This page says what we did, what we found, and how much the evidence supports. E
 [`RESULTS.md`](../RESULTS.md); the experiment is described step by step in [WALKTHROUGH.md](WALKTHROUGH.md) and
 can be re-run from [REPRODUCE.md](REPRODUCE.md).
 
+## Try it on your own data
+
+The workflow is now available as a [repository skill](../skills/dawe/SKILL.md). Give a coding agent your raw traces,
+the exact checkpoint, and a description of the failure. Supply reviewed corrections or a verifier, plus examples of
+behavior to preserve. The agent prepares the data and scorer, freezes development/evaluation groups, measures the
+baseline, maps failing decisions to model states, and derives and tests small closed-form edits within an agreed budget.
+If an edit passes repair and preservation checks, it returns a checkpoint-bound `.gpatch`, a report, and the scripts
+and per-item results needed to inspect it. An unsuccessful run returns its diagnosis rather than a promised patch.
+
+This lives in Geodesic today; there is no Bandr platform integration. The CLI handles local preparation and patch
+packaging. An agent still implements the source- and model-specific investigation. Preparation starts no GPU work;
+model inspection, generation, and candidate evaluation need compatible compute. See [the user guide](USAGE.md) for
+installation, a copyable prompt, the run stages, and applying/restoring your patch.
+
+The skill makes the method available; it adds no new model-editing results to the measurements below. Its preparation
+helpers and packaging were tested locally, but its generic collector has not been validated in an end-to-end run on a
+new user's model.
+
+## Relation to the original idea
+
+The starting idea was a “git diff for models”: learn a harness change from two models, then apply that difference to a
+model trained on another task. **That cross-task weight-delta transfer has not been tested.** What we did instead was
+derive a small edit from paired harness traces and hidden states of one fine-tuned checkpoint, then measure its effect.
+The experiment uses new-harness targets; it does not demonstrate adaptation without new-harness data. The released
+patches are bound to one exact checkpoint, so shipping a harness release with patches for many models remains a research
+direction. Today a user runs the investigation on their own checkpoint and gets a patch specific to it.
+
 ## Summary
 
 - Setup: Qwen3.5-4B, LoRA SFT on BFCL function-calling items rendered under one harness (`v1`: JSON schema in the
