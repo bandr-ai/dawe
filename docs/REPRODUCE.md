@@ -44,7 +44,7 @@ uv sync --extra dev
 uv run pytest -q                 # 55+ tests: scorer, harness round trips, patch format
 uv run dawe fetch            # six files, SHA-256 checked against the pin
 uv run dawe splits           # recompute the split, compare with splits/bfcl_v3_split.json
-uv run dawe roundtrip        # every gold answer survives render -> reply -> parse -> score, all 12 harnesses
+uv run dawe roundtrip        # strict diagnostic; known simple_307 native-format mismatch exits nonzero
 uv run dawe harnesses        # list the 12 harnesses
 uv run dawe render v4_format parallel_0    # see exactly what the model sees and should say
 ```
@@ -152,3 +152,12 @@ The apply step refuses any checkpoint that is not byte-for-byte the one the patc
 
 Committed per-item predictions (so `report` regenerates RESULTS.md and paired tests are possible), the exported
 patches, the frozen environment, a second SFT seed, and the controls listed in [WRITEUP.md](WRITEUP.md#not-yet-done).
+
+## Known roundtrip mismatch
+
+`v8_native` roundtrips 798/799 gold replies; the other eleven harnesses roundtrip 799/799. In `simple_307`,
+the string-typed optional `venue` has gold choices including boolean `True`. Native serialization and
+schema-based parsing return the string `"True"`, which the scorer rejects. The release tests isolate this
+exact case as a strict expected failure: a fix must remove the expected failure, and new failures are errors.
+The strict `dawe roundtrip` diagnostic continues to fail on it. This test policy changes neither gold
+targets nor scoring and does not revise historical research results.

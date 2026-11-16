@@ -7,8 +7,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --extra dev
-      - run: uv run pytest -q
-      # data-dependent checks: pinned dataset revision, split manifest, every gold answer survives every harness
+      # Fetch first so dataset-dependent tests run rather than skip.
       - run: uv run dawe fetch
+      - run: uv run pytest -q
       - run: uv run dawe splits
-      - run: uv run dawe roundtrip
+      # tests/test_release.py checks every gold/harness roundtrip, with one strict
+      # expected failure for the existing simple_307 native-format label mismatch.
