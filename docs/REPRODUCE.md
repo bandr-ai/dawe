@@ -151,7 +151,7 @@ The apply step refuses any checkpoint that is not byte-for-byte the one the patc
 ## What would make this stronger
 
 Committed per-item predictions (so `report` regenerates RESULTS.md and paired tests are possible), the exported
-patches, the frozen environment, a second SFT seed, and the controls listed in [WRITEUP.md](WRITEUP.md#not-yet-done).
+patches, the frozen environment, a second SFT seed, and the controls listed in [EXPERIMENT.md](EXPERIMENT.md#not-yet-done).
 
 ## Known roundtrip mismatch
 
