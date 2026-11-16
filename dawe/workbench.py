@@ -201,7 +201,7 @@ def freeze_examples(source: Path, development_dir: Path, evaluation_dir: Path,
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="geodesic workbench")
+    parser = argparse.ArgumentParser(prog="dawe workbench")
     sub = parser.add_subparsers(dest="command", required=True)
     init = sub.add_parser("init", help="prepare a skill workspace; never starts compute")
     init.add_argument("--source", type=Path, required=True)
@@ -228,7 +228,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def skill_main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="geodesic skill")
+    parser = argparse.ArgumentParser(prog="dawe skill")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("path", help="print the bundled SKILL.md location")
     install = sub.add_parser("install", help="copy the skill into a chosen skills directory")

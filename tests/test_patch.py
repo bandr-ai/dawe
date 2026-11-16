@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from geodesic import patch as gp
+from dawe import patch as gp
 
 VOCAB, DIM = 64, 16
 

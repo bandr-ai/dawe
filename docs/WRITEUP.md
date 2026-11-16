@@ -1,4 +1,4 @@
-# Geodesic: weight patches for harness changes
+# DAWE: from data to tested weight patches
 
 A fine-tuned model can break when the harness around it changes. We tested whether a small, closed-form
 edit to the weights, found by an agent from paired traces, can repair it, as an alternative to retraining.
@@ -15,8 +15,8 @@ baseline, maps failing decisions to model states, and derives and tests small cl
 If an edit passes repair and preservation checks, it returns a checkpoint-bound `.gpatch`, a report, and the scripts
 and per-item results needed to inspect it. An unsuccessful run returns its diagnosis rather than a promised patch.
 
-This lives in Geodesic today; there is no Bandr platform integration. The CLI handles local preparation and patch
-packaging. An agent still implements the source- and model-specific investigation. Preparation starts no GPU work;
+DAWE is a repository skill: users bring data and a checkpoint, and the agent handles the investigation.
+The CLI handles local preparation and patch packaging. An agent still implements the source- and model-specific investigation. Preparation starts no GPU work;
 model inspection, generation, and candidate evaluation need compatible compute. See [the user guide](USAGE.md) for
 installation, a copyable prompt, the run stages, and applying/restoring your patch.
 
@@ -124,7 +124,7 @@ predates the s2 session, so s2's $0.63 and its evaluations come on top, and it e
 1. **Scope.** One model (Qwen3.5-4B), one benchmark subset (BFCL v3 simple/multiple/parallel, 799 items, one skipped), one
    SFT run, one generation per cell, 204 test items. No variance across SFT seeds or agent attempts. Results are specific to
    structural reply changes fixed at the output layer. They say nothing about errors in argument values or semantics.
-2. **Our scorer is not BFCL's.** `geodesic/bfcl.py` is a simplified matcher written for this project (order-insensitive for
+2. **Our scorer is not BFCL's.** `dawe/bfcl.py` is a simplified matcher written for this project (order-insensitive for
    parallel calls, case and quote tolerant strings, int/float equality). It has not been validated against the official
    evaluator, so these accuracies are not comparable to leaderboard numbers.
 3. **The test set was held out, not hidden.** The agents never saw test items or predictions, and patches were chosen on train
@@ -150,7 +150,7 @@ predates the s2 session, so s2's $0.63 and its evaluations come on top, and it e
 10. **The reported accuracies belong to the original whole-tensor patches.** The released sparse `.gpatch` files were converted from
     those (the converter checks that exactly 2,557 and 5,064 weights change, matching what the lab recorded) and verified against the
     real checkpoint ([release/README.md](../release/README.md)), but the held-out evaluation was not re-run on a model produced by
-    `geodesic patch apply`. Raw held-out predictions are not in the repository either, so the tables in `RESULTS.md` cannot yet be
+    `dawe patch apply`. Raw held-out predictions are not in the repository either, so the tables in `RESULTS.md` cannot yet be
     regenerated from committed files; they match the maintainers' own earlier write-ups of the same runs.
 11. **Environment.** Top-level package versions, the model revision and the dataset revision are pinned, and `repro/freeze_*.txt`
     lists the resolved versions of all three images as built on 2026-11-16 (not necessarily as of the original runs; the generation image
@@ -164,7 +164,7 @@ predates the s2 session, so s2's $0.63 and its evaluations come on top, and it e
 - A closed-form edit to one or two embedding rows, fit on 595 train items, moved held-out accuracy from 73.5% to 85.8% (`v4`)
   and from 20.1% to 88.2% (`v11`) without moving `v1`, and the same-sized random edit did not help. Each is a single run on 204 items.
 - It is small enough to review: the diff is a list of indices and values in two rows of one tensor, checkable by hand
-  with `geodesic patch inspect`.
+  with `dawe patch inspect`.
 
 ## Credit
 

@@ -8,7 +8,7 @@ Try the free part first. It needs no GPU and no download except BFCL:
 
 ```bash
 uv sync --extra dev && uv run pytest -q
-uv run geodesic fetch && uv run geodesic splits && uv run geodesic roundtrip
+uv run dawe fetch && uv run dawe splits && uv run dawe roundtrip
 uv run python examples/patch_lifecycle.py     # build, apply, refuse a look-alike, restore, on a toy model
 ```
 
@@ -18,7 +18,7 @@ uv run python examples/patch_lifecycle.py     # build, apply, refuse a look-alik
 `v1` and merged into the weights. The split is a hash of the item id (`splits/bfcl_v3_split.json`), so train and test are
 the same on every machine. **GPU:** `modal run gpu/app.py::full`.
 
-What `v1` looks like (`uv run geodesic render v1 parallel_0`, last lines):
+What `v1` looks like (`uv run dawe render v1 parallel_0`, last lines):
 
 ```
 --- user
@@ -27,12 +27,12 @@ Play songs from the artists Taylor Swift and Maroon 5, with a play time of 20 mi
 {"tool_calls": [{"name": "spotify.play", "arguments": {"artist": "Taylor Swift", "duration": 20}}, {"name": "spotify.play", "arguments": {"artist": "Maroon 5", "duration": 15}}]}
 ```
 
-On the 204 held-out items `sft_v1` scores 87.7% under `v1` (`RESULTS.md`). Scoring is in `geodesic/bfcl.py`: the calls the
+On the 204 held-out items `sft_v1` scores 87.7% under `v1` (`RESULTS.md`). Scoring is in `dawe/bfcl.py`: the calls the
 model made, mapped back to BFCL's names, must match the ground truth (our scorer, not the official one).
 
 ## 2. The failure
 
-Same item under `v4_format` (`uv run geodesic render v4_format parallel_0`):
+Same item under `v4_format` (`uv run dawe render v4_format parallel_0`):
 
 ```
 --- assistant (target)
@@ -58,8 +58,8 @@ Other harness changes did not do this (`RESULTS.md`: renames 87.3%, new prompt 8
 ## 3. The map
 
 The map ties the failure to places in the model. Built from paired traces (same item, same answer, two harnesses;
-`uv run geodesic build-pairs v1 v4_format`), then (**GPU**) `modal run gpu/app.py::map_`, then
-`uv run geodesic map-summary runs/map_v1__v4_format.json`. What the agent was shown (`sessions/s1/context/map_v1_vs_v4.txt`,
+`uv run dawe build-pairs v1 v4_format`), then (**GPU**) `modal run gpu/app.py::map_`, then
+`uv run dawe map-summary runs/map_v1__v4_format.json`. What the agent was shown (`sessions/s1/context/map_v1_vs_v4.txt`,
 excerpt):
 
 ```
@@ -124,12 +124,12 @@ alone at `v4`-stop and at every `v1` decision." No optimizer, no training loop.
 What gets saved is a sparse patch (`release/patches/s1_eos12.gpatch`; the toy demo above shows the same thing on a small model):
 
 ```bash
-geodesic patch inspect release/patches/s1_eos12.gpatch
+dawe patch inspect release/patches/s1_eos12.gpatch
 #   file size      23,632 bytes  (whole changed tensors would be 1,271,398,400)
 #   weights changed 2,557
 #   model.language_model.embed_tokens.weight  BF16[248320, 2560]: 2,557 of 635,699,200  rows [248046]
-geodesic patch apply   release/patches/s1_eos12.gpatch --source sft_v1/merged --out sft_v1_xml
-geodesic patch restore release/patches/s1_eos12.gpatch --patched sft_v1_xml  --out sft_v1_back   # == sft_v1/merged, byte for byte
+dawe patch apply   release/patches/s1_eos12.gpatch --source sft_v1/merged --out sft_v1_xml
+dawe patch restore release/patches/s1_eos12.gpatch --patched sft_v1_xml  --out sft_v1_back   # == sft_v1/merged, byte for byte
 ```
 
 (`rows [248046]` is `<|im_end|>`.) Applying to anything other than the
@@ -138,7 +138,7 @@ exact `sft_v1` checkpoint is refused, including the plain base model ([PATCH_FOR
 ## 5. Held-out evaluation
 
 After the agent submitted, we (not the agent) ran the 204 test items under all 12 harnesses with the patch applied
-(**GPU:** `modal run gpu/lab.py::final --session s1 --name eos12`, then `uv run geodesic report`):
+(**GPU:** `modal run gpu/lab.py::final --session s1 --name eos12`, then `uv run dawe report`):
 
 | | `v1` | `v4_format` | `v6_all` | `v12_xml_opaque` | `v11_plan` |
 |---|---|---|---|---|---|
@@ -157,8 +157,8 @@ including the controls that have not been run (unconditional logit bias, second 
 
 | To check | Do |
 |---|---|
-| the data and split are what we used | `geodesic fetch && geodesic splits` |
-| the scorer accepts our gold answers under every harness | `geodesic roundtrip` |
+| the data and split are what we used | `dawe fetch && dawe splits` |
+| the scorer accepts our gold answers under every harness | `dawe roundtrip` |
 | the table in `RESULTS.md` | needs per-item predictions (not committed yet); `REPRODUCE.md` section B regenerates them |
 | what the agent did | `sessions/s1/{BRIEF.md,LOG.md,analysis,edits,tries,notes.md}` |
 | the patch tooling | `uv run python examples/patch_lifecycle.py`, `uv run pytest tests/test_patch.py` |

@@ -28,8 +28,8 @@ def collect(args) -> None:
     import torch
     from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForImageTextToText, AutoTokenizer
 
-    from geodesic.patch import identify
-    from geodesic.workbench import digest, encoded, read_examples, write_new_directory
+    from dawe.patch import identify
+    from dawe.workbench import digest, encoded, read_examples, write_new_directory
 
     root = args.development.resolve()
     manifest = json.loads((root / "manifest.json").read_text())

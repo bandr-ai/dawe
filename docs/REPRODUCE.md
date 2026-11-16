@@ -16,13 +16,13 @@ Level B does not need either, it makes its own.
 
 | Thing | Pin | Where |
 |---|---|---|
-| Base model | `Qwen/Qwen3.5-4B` @ `851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a` | `geodesic/pins.py` |
-| Dataset | `gorilla-llm/Berkeley-Function-Calling-Leaderboard` @ `61fc0608cfd831fcfbbaa676ebdfef0ed963eeda`, six files with SHA-256 | `geodesic/pins.py` (checked by `geodesic fetch`) |
-| Split | `sha256(item id) mod 100 < 25` is test; 595 train / 204 test; `simple_363` skipped | `splits/bfcl_v3_split.json` (checked by `geodesic splits`) |
-| Training stack | torch 2.13.0, transformers 5.20.2, peft 0.21.2, accelerate 1.15.0, flash-linear-attention 0.5.2 (Python 3.12) | `geodesic/pins.py` → `gpu/app.py` |
-| Generation stack | vllm 0.31.0 (Python 3.12) | `geodesic/pins.py` → `gpu/app.py`, `gpu/lab.py` |
-| SFT recipe | LoRA r=32, alpha 64, every `Linear` in the language model, lr 1e-4, 3 epochs, batch 4×4, seed 0, bf16, loss on reply only | `geodesic/pins.py::SFT` |
-| Decoding | greedy, max 512 new tokens, thinking off, `max_model_len` 8192 | `geodesic/pins.py::GENERATION` |
+| Base model | `Qwen/Qwen3.5-4B` @ `851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a` | `dawe/pins.py` |
+| Dataset | `gorilla-llm/Berkeley-Function-Calling-Leaderboard` @ `61fc0608cfd831fcfbbaa676ebdfef0ed963eeda`, six files with SHA-256 | `dawe/pins.py` (checked by `dawe fetch`) |
+| Split | `sha256(item id) mod 100 < 25` is test; 595 train / 204 test; `simple_363` skipped | `splits/bfcl_v3_split.json` (checked by `dawe splits`) |
+| Training stack | torch 2.13.0, transformers 5.20.2, peft 0.21.2, accelerate 1.15.0, flash-linear-attention 0.5.2 (Python 3.12) | `dawe/pins.py` → `gpu/app.py` |
+| Generation stack | vllm 0.31.0 (Python 3.12) | `dawe/pins.py` → `gpu/app.py`, `gpu/lab.py` |
+| SFT recipe | LoRA r=32, alpha 64, every `Linear` in the language model, lr 1e-4, 3 epochs, batch 4×4, seed 0, bf16, loss on reply only | `dawe/pins.py::SFT` |
+| Decoding | greedy, max 512 new tokens, thinking off, `max_model_len` 8192 | `dawe/pins.py::GENERATION` |
 | Local tooling | `uv.lock` | repo root |
 
 **Not pinned or not yet recorded:**
@@ -42,27 +42,27 @@ Level B does not need either, it makes its own.
 ```bash
 uv sync --extra dev
 uv run pytest -q                 # 55+ tests: scorer, harness round trips, patch format
-uv run geodesic fetch            # six files, SHA-256 checked against the pin
-uv run geodesic splits           # recompute the split, compare with splits/bfcl_v3_split.json
-uv run geodesic roundtrip        # every gold answer survives render -> reply -> parse -> score, all 12 harnesses
-uv run geodesic harnesses        # list the 12 harnesses
-uv run geodesic render v4_format parallel_0    # see exactly what the model sees and should say
+uv run dawe fetch            # six files, SHA-256 checked against the pin
+uv run dawe splits           # recompute the split, compare with splits/bfcl_v3_split.json
+uv run dawe roundtrip        # every gold answer survives render -> reply -> parse -> score, all 12 harnesses
+uv run dawe harnesses        # list the 12 harnesses
+uv run dawe render v4_format parallel_0    # see exactly what the model sees and should say
 ```
 
-A new split cannot be produced by accident: `geodesic splits` fails if the rule, the dataset revision or any id changes.
+A new split cannot be produced by accident: `dawe splits` fails if the rule, the dataset revision or any id changes.
 
 ## B. Re-derive the experiment (Modal)
 
 Setup: `uv sync --extra dev --extra gpu`, `modal setup`. Everything lands in `runs/` (gitignored) and on the
-Modal volume `geodesic-runs`. Commands below are in the order we ran them; costs are Modal list prices at the time
+Modal volume `geodesic-runs`. The original research apps and volumes retain their historical names after the DAWE rename so these commands still address the recorded experiment resources. Commands below are in the order we ran them; costs are Modal list prices at the time
 (`gpu/app.py::PRICE`, about $4.29 per H100-hour) and are logged to `runs/costs.jsonl`.
 
 ### 1. Data and harnesses
 
 ```bash
-uv run geodesic fetch
-uv run geodesic build-sft                    # data/sft/v1_bfcl_train.jsonl     (595 rows, harness v1)
-uv run geodesic build-eval                   # data/eval/bfcl_test.jsonl        (204 items x 12 harnesses)
+uv run dawe fetch
+uv run dawe build-sft                    # data/sft/v1_bfcl_train.jsonl     (595 rows, harness v1)
+uv run dawe build-eval                   # data/eval/bfcl_test.jsonl        (204 items x 12 harnesses)
 ```
 
 ### 2. Baseline: LoRA SFT on v1
@@ -70,7 +70,7 @@ uv run geodesic build-eval                   # data/eval/bfcl_test.jsonl        
 ```bash
 modal run gpu/app.py::smoke                  # optional, ~10 min: 10 steps + 20 generations
 modal run gpu/app.py::full                   # SFT -> runs/preds_base.jsonl, runs/preds_sft_v1.jsonl
-uv run geodesic score runs/preds_sft_v1.jsonl
+uv run dawe score runs/preds_sft_v1.jsonl
 ```
 
 This is the failure. Expect `sft_v1` near 87.7% under `v1`, about 73.5% under `v4_format`, about 20.1% under `v11_plan`
@@ -79,21 +79,21 @@ This is the failure. Expect `sft_v1` near 87.7% under `v1`, about 73.5% under `v
 Retraining ceilings (SFT from the base model directly on a new harness):
 
 ```bash
-for h in v4_format v6_all v11_plan; do uv run geodesic build-sft --harness $h; done
+for h in v4_format v6_all v11_plan; do uv run dawe build-sft --harness $h; done
 modal run gpu/app.py::ceiling --harnesses v4_format,v6_all,v11_plan
 ```
 
 Extra harnesses added after the first runs (for example `v7` to `v12`) were scored with
 `modal run gpu/app.py::gen --model sft_v1 --eval-file data/eval/extra.jsonl --append`, on an eval file restricted to
-the new harnesses (`uv run geodesic build-eval --harness v7_opaque v8_native --out data/eval/extra.jsonl`).
+the new harnesses (`uv run dawe build-eval --harness v7_opaque v8_native --out data/eval/extra.jsonl`).
 
 ### 3. Map the failure
 
 ```bash
-uv run geodesic build-pairs v1 v4_format     # same train items, same answers, two renderings
-uv run geodesic build-pairs v1 v6_all
+uv run dawe build-pairs v1 v4_format     # same train items, same answers, two renderings
+uv run dawe build-pairs v1 v6_all
 modal run gpu/app.py::map_ --pairs v1__v4_format,v1__v6_all
-uv run geodesic map-summary runs/map_v1__v4_format.json     # is the change concentrated? where?
+uv run dawe map-summary runs/map_v1__v4_format.json     # is the change concentrated? where?
 ```
 
 `map-summary` prints, for each harness: how surprised the model is at "another call follows" decisions, how the gradient
@@ -132,21 +132,21 @@ modal run gpu/lab.py::final --session s1 --name eos12            # -> runs/preds
 modal run gpu/lab.py::final --session s2 --name plan8_eos12
 cp sessions/control/rand.py . && LAB_SESSION=control python lab patch rand.py rand_eos   # the random-edit control
 modal run gpu/lab.py::final --session control --name rand_eos
-uv run geodesic report                                           # the table in RESULTS.md
+uv run dawe report                                           # the table in RESULTS.md
 ```
 
-`geodesic report` reads every `runs/preds_*.jsonl`, scores it with the committed scorer, and prints both tables.
+`dawe report` reads every `runs/preds_*.jsonl`, scores it with the committed scorer, and prints both tables.
 
 ## C. Apply our patches
 
 ```bash
-geodesic patch apply release/patches/s1_eos12.gpatch --source /path/to/sft_v1/merged --out /path/to/sft_v1_xml
+dawe patch apply release/patches/s1_eos12.gpatch --source /path/to/sft_v1/merged --out /path/to/sft_v1_xml
 modal run gpu/app.py::gen --model <that checkpoint>          # then score as above
 ```
 
 The apply step refuses any checkpoint that is not byte-for-byte the one the patch was made from. If you retrained
 `sft_v1`, expect a refusal; make a patch for your own model by running the agent's edit script instead
-(section B.4) or use `geodesic patch create --source YOURS --edited EDITED`.
+(section B.4) or use `dawe patch create --source YOURS --edited EDITED`.
 
 ## What would make this stronger
 

@@ -1,19 +1,19 @@
-"""geodesic command line.
+"""dawe command line.
 
-  geodesic skill path | install --dest DIR    locate or install the DAWE skill
-  geodesic workbench init | freeze       prepare runs with user data, no GPU
-  geodesic fetch                        download BFCL (pinned revision, hash-checked) into data/bfcl
-  geodesic splits [--write]             check (or regenerate) splits/bfcl_v3_split.json
-  geodesic patch ...                    sparse weight patches: create | from-dense | inspect | apply | restore | verify
-  geodesic harnesses                    list harness versions
-  geodesic render <harness> <item_id>   show the prompt and correct reply for one BFCL item
-  geodesic roundtrip                    check every BFCL item survives render -> reply -> parse -> score
-  geodesic build-sft                    write the SFT file (BFCL train split under one harness)
-  geodesic build-eval                   write the eval prompts (BFCL test split x harnesses)
-  geodesic build-pairs <a> <b>          paired traces: train items under harness a and b
-  geodesic map-summary <map.json> [<map2.json>]   read a runs/map_*.json: is the harness change concentrated?
-  geodesic report                       one table with every eval in runs/
-  geodesic score <preds.jsonl>          score model outputs per harness
+  dawe skill path | install --dest DIR    locate or install the DAWE skill
+  dawe workbench init | freeze       prepare runs with user data, no GPU
+  dawe fetch                        download BFCL (pinned revision, hash-checked) into data/bfcl
+  dawe splits [--write]             check (or regenerate) splits/bfcl_v3_split.json
+  dawe patch ...                    sparse weight patches: create | from-dense | inspect | apply | restore | verify
+  dawe harnesses                    list harness versions
+  dawe render <harness> <item_id>   show the prompt and correct reply for one BFCL item
+  dawe roundtrip                    check every BFCL item survives render -> reply -> parse -> score
+  dawe build-sft                    write the SFT file (BFCL train split under one harness)
+  dawe build-eval                   write the eval prompts (BFCL test split x harnesses)
+  dawe build-pairs <a> <b>          paired traces: train items under harness a and b
+  dawe map-summary <map.json> [<map2.json>]   read a runs/map_*.json: is the harness change concentrated?
+  dawe report                       one table with every eval in runs/
+  dawe score <preds.jsonl>          score model outputs per harness
 """
 
 from __future__ import annotations
@@ -80,7 +80,7 @@ def main(argv: list[str] | None = None) -> int:
         from . import workbench
 
         return (workbench.skill_main if argv[0] == "skill" else workbench.main)(argv[1:])
-    ap = argparse.ArgumentParser(prog="geodesic")
+    ap = argparse.ArgumentParser(prog="dawe")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("skill", help="path | install --dest DIR: bundled DAWE skill")
     sub.add_parser("workbench", help="init | freeze: prepare a DAWE run with your data")

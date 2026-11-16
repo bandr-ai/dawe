@@ -5,8 +5,8 @@ These eight synthetic records illustrate the input contract, grouped split, and 
 From the repo root:
 
 ```bash
-uv run geodesic workbench init --source examples/dawe/examples.jsonl --model /path/to/checkpoint --out /tmp/dawe-example-run
-uv run geodesic workbench freeze examples/dawe/examples.jsonl \
+uv run dawe workbench init --source examples/dawe/examples.jsonl --model /path/to/checkpoint --out /tmp/dawe-example-run
+uv run dawe workbench freeze examples/dawe/examples.jsonl \
   --development-dir /tmp/dawe-example-run/edit \
   --evaluation-dir /tmp/dawe-example-evaluation
 ```

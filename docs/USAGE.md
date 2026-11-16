@@ -2,7 +2,7 @@
 
 Give a coding agent your traces, the exact model checkpoint, and a description of what is failing. The agent follows the [DAWE skill](../skills/dawe/SKILL.md) to investigate the failure, derive a small weight edit when the evidence supports one, and evaluate it against behavior you want to preserve.
 
-Today this runs through an agent in the Geodesic repository. There is no Bandr upload flow, and no CLI command that automatically searches for a working patch. The agent writes the data normalizer, scorer, and model-specific editing and inference code. The included commands prepare the workspace, freeze examples, and package/apply/restore patches.
+The starting point is simple: open this repository in your coding agent and give it the data path, checkpoint path, and desired fix. It handles normalization, scoring, model inspection, editing, and evaluation. The sections below explain what happens behind that prompt; you do not need to carry out each preparation step yourself.
 
 ## 1. Bring these inputs
 
@@ -19,7 +19,7 @@ You do not need to choose layers, label decision tokens, or format every log int
 Keep data and checkpoints outside the source repository. A possible local layout is:
 
 ```text
-~/geodesic/                    # this repository
+~/dawe/                    # this repository
 ~/dawe-inputs/logs/            # raw data, kept intact
 ~/models/my-model/             # exact source checkpoint
 ~/dawe-runs/xml-repair/        # agent workspace, created separately
@@ -31,8 +31,10 @@ Keep data and checkpoints outside the source repository. A possible local layout
 Use Python 3.11+ and uv. From a source checkout containing `skills/dawe/SKILL.md`:
 
 ```bash
+git clone https://github.com/bandr-ai/dawe.git
+cd dawe
 uv sync
-uv run geodesic skill path
+uv run dawe skill path
 ```
 
 Give your coding agent this prompt, replacing the paths and failure description:
@@ -64,7 +66,7 @@ If you already have an agreed budget or available local GPU, include that instea
 Reading the skill directly is enough. Optionally copy it into the skills directory your agent uses:
 
 ```bash
-uv run geodesic skill install --dest /absolute/path/to/your/skills
+uv run dawe skill install --dest /absolute/path/to/your/skills
 ```
 
 This creates `your/skills/dawe/` and refuses to overwrite an existing copy. Agent discovery depends on your agent's skills configuration.
@@ -81,13 +83,13 @@ This creates `your/skills/dawe/` and refuses to overwrite an existing copy. Agen
 For reference, the preparation commands the agent uses are:
 
 ```bash
-uv run geodesic workbench init \
+uv run dawe workbench init \
   --source /absolute/path/to/dawe-inputs/logs \
   --model /absolute/path/to/models/my-model \
   --out /absolute/path/to/dawe-runs/xml-repair
 
 # After the agent has normalized and reviewed examples:
-uv run geodesic workbench freeze /absolute/path/to/normalized.jsonl \
+uv run dawe workbench freeze /absolute/path/to/normalized.jsonl \
   --development-dir /absolute/path/to/dawe-runs/xml-repair/edit \
   --evaluation-dir /absolute/path/to/dawe-evaluation/xml-repair
 ```
@@ -103,8 +105,8 @@ Expect a `REPORT.md` explaining the exact checkpoint, data/split hashes, scorer,
 Inspect and apply that patch to the exact source checkpoint:
 
 ```bash
-uv run geodesic patch inspect /absolute/path/to/candidate.gpatch
-uv run geodesic patch apply /absolute/path/to/candidate.gpatch \
+uv run dawe patch inspect /absolute/path/to/candidate.gpatch
+uv run dawe patch apply /absolute/path/to/candidate.gpatch \
   --source /absolute/path/to/models/my-model \
   --out /absolute/path/to/models/my-model-patched
 ```
@@ -114,7 +116,7 @@ Applying writes a new checkpoint directory. Point your existing compatible infer
 To reconstruct the source weights from the patched checkpoint:
 
 ```bash
-uv run geodesic patch restore /absolute/path/to/candidate.gpatch \
+uv run dawe patch restore /absolute/path/to/candidate.gpatch \
   --patched /absolute/path/to/models/my-model-patched \
   --out /absolute/path/to/models/my-model-restored
 ```

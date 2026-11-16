@@ -16,7 +16,7 @@ from pathlib import Path
 
 import modal
 
-from geodesic import pins
+from dawe import pins
 
 MODEL = pins.BASE_MODEL
 REVISION = pins.BASE_REVISION
@@ -35,7 +35,7 @@ train_image = (
     modal.Image.debian_slim(python_version=pins.PYTHON_IMAGE)
     .uv_pip_install(*pins.pip_pins(pins.TRAIN_PACKAGES), "hf_transfer")
     .env({"HF_HUB_ENABLE_HF_TRANSFER": "1"})
-    .add_local_python_source("geodesic")  # gpu/app.py imports geodesic.pins
+    .add_local_python_source("dawe")  # gpu/app.py imports dawe.pins
 )
 
 # The FlashInfer sampler compiles a kernel at start-up and needs nvcc, which this slim image
@@ -44,7 +44,7 @@ vllm_image = (
     modal.Image.debian_slim(python_version=pins.PYTHON_IMAGE)
     .uv_pip_install(*pins.pip_pins(pins.VLLM_PACKAGES), "hf_transfer")
     .env({"HF_HUB_ENABLE_HF_TRANSFER": "1", "VLLM_USE_FLASHINFER_SAMPLER": "0"})
-    .add_local_python_source("geodesic")
+    .add_local_python_source("dawe")
 )
 
 COMMON = dict(gpu=GPU, cpu=CPU, memory=MEM_GIB * 1024, volumes=VOLS, scaledown_window=2)
@@ -383,7 +383,7 @@ def map_(pairs: str = "v1__v4_format,v1__v6_all", run: str = "sft_v1"):
 
 
 # --- record the exact environment ----------------------------------------------------------------------
-# Top-level versions are pinned in geodesic/pins.py; their dependencies are resolved when Modal builds the image.
+# Top-level versions are pinned in dawe/pins.py; their dependencies are resolved when Modal builds the image.
 # Run this once per release and commit the output (repro/freeze_*.txt) so the full set is on record.
 
 

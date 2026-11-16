@@ -1,7 +1,7 @@
 """The train/test split as a file, so it can be checked without trusting the code that makes it.
 
-Rule (geodesic.bfcl.Item.split): sha256(item id) mod 100 < 25 -> test, else train. No random seed involved.
-`splits/bfcl_v3_split.json` lists every id; `geodesic splits` recomputes it from the data and compares.
+Rule (dawe.bfcl.Item.split): sha256(item id) mod 100 < 25 -> test, else train. No random seed involved.
+`splits/bfcl_v3_split.json` lists every id; `dawe splits` recomputes it from the data and compares.
 """
 
 from __future__ import annotations

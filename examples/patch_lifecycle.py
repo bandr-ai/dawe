@@ -12,10 +12,10 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from geodesic import patch as gp
+from dawe import patch as gp
 
 VOCAB, DIM, EMBED = 4096, 256, "model.language_model.embed_tokens.weight"
-tmp = Path(tempfile.mkdtemp(prefix="geodesic-demo-"))
+tmp = Path(tempfile.mkdtemp(prefix="dawe-demo-"))
 
 
 def toy_model(root: Path, seed: int) -> Path:

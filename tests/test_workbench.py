@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from geodesic.cli import main
-from geodesic.workbench import SKILL, freeze_examples, init_workspace, install_skill, read_examples, split_examples
+from dawe.cli import main
+from dawe.workbench import SKILL, freeze_examples, init_workspace, install_skill, read_examples, split_examples
 
 
 def fixture_rows():
@@ -113,7 +113,7 @@ def test_install_does_not_overwrite_and_copies_references(tmp_path):
 
 
 def test_new_cli_routes_do_not_load_bfcl(monkeypatch, tmp_path):
-    from geodesic import bfcl
+    from dawe import bfcl
 
     def no_dataset():
         pytest.fail("BFCL should not be loaded for user data")

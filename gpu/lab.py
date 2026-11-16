@@ -34,7 +34,7 @@ from pathlib import Path
 
 import modal
 
-from geodesic import pins
+from dawe import pins
 
 ROOT = Path(__file__).resolve().parent.parent
 PRICE = {"H100": 0.001097, "cpu_core": 0.0000131, "mem_gib": 0.00000222}
@@ -54,7 +54,7 @@ VOLS = {"/runs": runs, "/root/.cache/huggingface": hf_cache}
 
 def _with_code(img: modal.Image) -> modal.Image:
     return (
-        img.add_local_python_source("geodesic")
+        img.add_local_python_source("dawe")
         .add_local_dir(ROOT / "harnesses", "/root/harnesses")
         .add_local_dir(ROOT / "data" / "bfcl", "/root/data/bfcl")
     )
@@ -248,7 +248,7 @@ class Lab:
         import torch
         from transformers import AutoModelForImageTextToText, AutoTokenizer
 
-        from geodesic import bfcl
+        from dawe import bfcl
 
         t0 = time.time()
         runs.reload()
@@ -274,7 +274,7 @@ class Lab:
     def example(self, item_id: str, h: str) -> dict:
         import torch
 
-        from geodesic.harness import Harness, render, target
+        from dawe.harness import Harness, render, target
 
         key = (item_id, h)
         if key in self._cache:
@@ -354,7 +354,7 @@ class Lab:
         """Run the agent's edit(model, ctx) and save what changed as a sparse, checkpoint-bound .gpatch."""
         import torch
 
-        from geodesic import patch as gp
+        from dawe import patch as gp
 
         _check(session, "runs")
         cfg = _config(session)
@@ -407,7 +407,7 @@ class Lab:
 
 def _source_identity():
     """Content fingerprint of the SFT checkpoint, hashed once and cached next to it on the volume."""
-    from geodesic import patch as gp
+    from dawe import patch as gp
 
     root = Path(f"/runs/{BASE_RUN}/merged")
     cache = root.parent / "fingerprint.json"
@@ -434,13 +434,13 @@ def _brief(led: dict) -> dict:
 def _patched_dir(session: str | None, name: str | None) -> str:
     """The SFT model with a patch applied, as a model folder vLLM can load (unchanged files are symlinks).
 
-    Uses the same apply code as the public `geodesic patch apply`, in --fast mode: the lab made the patch from
+    Uses the same apply code as the public `dawe patch apply`, in --fast mode: the lab made the patch from
     this very checkpoint, so re-hashing 8 GB on every try would only cost GPU minutes.
     Old sessions saved whole tensors as <name>.safetensors; those are converted to the sparse format on first use.
     """
     import shutil
 
-    from geodesic import patch as gp
+    from dawe import patch as gp
 
     src = Path(f"/runs/{BASE_RUN}/merged")
     if not name:
@@ -460,8 +460,8 @@ def _patched_dir(session: str | None, name: str | None) -> str:
 def _gen_and_score(model_dir: str, items, harnesses: list[str], max_tokens: int = 512):
     from vllm import LLM, SamplingParams
 
-    from geodesic.datasets import eval_rows, score
-    from geodesic.harness import Harness
+    from dawe.datasets import eval_rows, score
+    from dawe.harness import Harness
 
     rows = eval_rows(items, [Harness.load(h) for h in harnesses])
     llm = LLM(model=model_dir, max_model_len=8192, gpu_memory_utilization=0.85, enforce_eager=True,
@@ -475,8 +475,8 @@ def _gen_and_score(model_dir: str, items, harnesses: list[str], max_tokens: int 
 @app.function(image=vllm_image, timeout=20 * 60, scaledown_window=2, **COMMON)
 def try_patch(session: str, name: str | None, free: bool = False) -> dict:
     """Score a patch on ALL train items under v1 and v4. Costs one try unless free (baseline only)."""
-    from geodesic import bfcl
-    from geodesic.harness import Harness, parse_calls, render, to_bfcl
+    from dawe import bfcl
+    from dawe.harness import Harness, parse_calls, render, to_bfcl
 
     if not free:
         _check(session, "tries")
@@ -543,8 +543,8 @@ def decision_map(harnesses: list[str] = [KEEP, TARGET], kinds: list[str] = ["con
     from safetensors.torch import save_file
     from transformers import AutoModelForImageTextToText, AutoTokenizer
 
-    from geodesic import bfcl
-    from geodesic.harness import Harness, render, target
+    from dawe import bfcl
+    from dawe.harness import Harness, render, target
 
     t0 = time.time()
     runs.reload()
@@ -659,7 +659,7 @@ def export_patch(session: str, name: str) -> bytes:
     The old saver recorded `changed_weights` next to each patch; the conversion must reproduce that count exactly,
     otherwise it raises (the stored tensors and the checkpoint disagree about what was edited).
     """
-    from geodesic import patch as gp
+    from dawe import patch as gp
 
     runs.reload()
     pdir = _sdir(session) / "patches"

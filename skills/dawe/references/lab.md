@@ -2,7 +2,7 @@
 
 ## Supported starting point
 
-Accessible, unquantized Transformers safetensors checkpoints with text chat inputs are the easiest first case. Geodesic preparation has no GPU dependency. The bundled state collector needs PyTorch, Transformers, and a model-compatible runtime installed separately. Choose versions compatible with the user's checkpoint rather than replacing an existing working environment.
+Accessible, unquantized Transformers safetensors checkpoints with text chat inputs are the easiest first case. DAWE preparation has no GPU dependency. The bundled state collector needs PyTorch, Transformers, and a model-compatible runtime installed separately. Choose versions compatible with the user's checkpoint rather than replacing an existing working environment.
 
 From the skill folder, after preparing development examples and authorizing compute:
 
@@ -12,15 +12,15 @@ python scripts/probe.py --model /path/to/checkpoint \
   --device cuda --template-options '{"enable_thinking":false}'
 ```
 
-Pass `--revision COMMIT` for a remote model and use the same revision for baseline generation. For local weights, record a Geodesic content fingerprint when creating the patch. `--max-length` and `--max-points` bound the collector's input size; they do not bound provider dollars. A run fails instead of truncating gold targets silently. Do not use evaluation examples with this command.
+Pass `--revision COMMIT` for a remote model and use the same revision for baseline generation. For local weights, record a DAWE content fingerprint when creating the patch. `--max-length` and `--max-points` bound the collector's input size; they do not bound provider dollars. A run fails instead of truncating gold targets silently. Do not use evaluation examples with this command.
 
 The collector produces `states.pt` with `[point, layer, hidden]` states and per-point provenance in `points.json`, including target and greedy token IDs and target NLL. `summary.json` records the model, template settings and development manifest hash. Load locally generated tensors with `torch.load(..., weights_only=True)`. The collector does not generate outputs, fit a patch, compute gradients, or prove the mapped information is causal. If the model needs a different wrapper/chat template, write an adapter and preserve the same provenance and checks.
 
 ## Reusing the experiment
 
-In a Geodesic source checkout, `sessions/s1/` and `sessions/s2/` show the actual analyses and edits. `gpu/lab.py` and `scripts/lab.py` implement the original Modal loop: run → patch → try → submit. They are BFCL-specific and share the app/volume names used for that experiment. Do not deploy them unchanged for a customer's data or overwrite those volumes. Adapt the dataset loader, exact model loader, chat template, decision detector, scorer, and compute limits; use distinct resources. The published `docs/LAB.md` explains the original guardrails and their limits.
+In a DAWE source checkout, `sessions/s1/` and `sessions/s2/` show the actual analyses and edits. `gpu/lab.py` and `scripts/lab.py` implement the original Modal loop: run → patch → try → submit. They are BFCL-specific and share the app/volume names used for that experiment. Do not deploy them unchanged for a customer's data or overwrite those volumes. Adapt the dataset loader, exact model loader, chat template, decision detector, scorer, and compute limits; use distinct resources. The published `docs/LAB.md` explains the original guardrails and their limits.
 
-A local run can use the same loop without Modal: analysis scripts load development states; an edit function writes to a freshly loaded source model; the generation runner scores candidates under identical settings. Capture new changed-tensor values with safetensors and use `geodesic patch from-dense` to create the portable artifact. Retain every script and candidate score. The agent implements the source/runtime-specific adapter; there is no generic one-command automatic patch search.
+A local run can use the same loop without Modal: analysis scripts load development states; an edit function writes to a freshly loaded source model; the generation runner scores candidates under identical settings. Capture new changed-tensor values with safetensors and use `dawe patch from-dense` to create the portable artifact. Retain every script and candidate score. The agent implements the source/runtime-specific adapter; there is no generic one-command automatic patch search.
 
 ## A readout hypothesis to test
 

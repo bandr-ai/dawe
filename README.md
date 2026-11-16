@@ -1,37 +1,67 @@
-# geodesic
+# DAWE
 
-Edit model weights instead of retraining. First use: a harness change (new call format, plan-first replies, ...)
-breaks a fine-tuned model; a small weight edit found by an agent from paired traces repairs it.
+**Bring your data and model. Get a tested weight patch.**
 
-**This release is a reproducible experiment, not a product.** It contains the harnesses, the split, the scorer, the
-baseline recipe, the data-to-weight map code, the bounded agent lab, everything the agents wrote, a sparse and
-checkpoint-bound patch format with apply and restore tools, and the numbers. Read
-[docs/WRITEUP.md](docs/WRITEUP.md) for what was found and, just as important, what was not shown.
+DAWE is an agent skill for fixing model behavior with small weight edits. Give it logs, conversations,
+tool traces, or corrected examples, point it at your checkpoint, and describe what should change.
+The agent prepares the data, investigates the failure, derives candidate edits, and tests that the fix
+preserves behavior that already works.
 
-## Use DAWE with your own data
+## Use it
 
-Give your coding agent this prompt:
-
-```text
-Read skills/dawe/SKILL.md and use DAWE on my traces in /path/to/logs.
-The model checkpoint is /path/to/checkpoint. Investigate why it stops after
-one tool call, derive a small weight patch, and test that existing behavior
-still works. Inspect the data first and propose the compute budget before
-starting paid GPU work.
-```
-
-The agent inspects your source, prepares corrected and preservation examples, maps the failing decisions, writes and tests edits, and returns a checkpoint-bound patch with its evaluation. You can supply other model failures too; a small edit is not guaranteed. Model weights and trustworthy targets or a verifier are required. This is a skill-driven investigation, not an automatic patch-search service.
-
-The skill is bundled in source and Python wheels. Read it directly, locate an installed copy with `geodesic skill path`, or copy it into a skills directory you choose:
+Clone the repo and install the local tools (Python 3.11+ and uv):
 
 ```bash
-geodesic skill install --dest /path/to/your/skills
-geodesic workbench init --source /path/to/logs --model /path/to/checkpoint --out /path/to/dawe-run
+git clone https://github.com/bandr-ai/dawe.git
+cd dawe
+uv sync
 ```
 
-Preparation is local and starts no compute. The agent adapts the user's data/runtime; the original Modal lab remains BFCL-specific. See [the skill](skills/dawe/SKILL.md) and [the no-GPU example](examples/dawe/README.md). Keep private runs, data, and checkpoints out of Git.
+Open the repo in your coding agent and give it this:
 
-For the complete user workflow—what to supply, the agent prompt, what happens during a run, and how to apply the result—read [Use DAWE with your model and data](docs/USAGE.md).
+```text
+Read skills/dawe/SKILL.md and use DAWE.
+
+My data is in /path/to/data.
+My model checkpoint is /path/to/checkpoint.
+Fix: [describe the behavior you want to change].
+Preserve: [describe what already works].
+
+Handle the data preparation and evaluation. Inspect the files first and
+propose a compute budget before paid work. Return a tested patch, the
+results, and the scripts used to produce it. Stop GPU resources when done.
+```
+
+That's the starting point. You don't need to choose layers, label decision tokens, or convert your logs
+by hand. The agent adapts the workflow to your data and model. It needs accessible weights and reliable
+correct answers or a verifier; it asks for missing essentials after inspecting what you supplied.
+
+You get a report, evaluation results, and—when an edit passes the checks—a checkpoint-bound `.gpatch`.
+Apply it to a new checkpoint directory:
+
+```bash
+uv run dawe patch apply /path/to/fix.gpatch --source /path/to/checkpoint --out /path/to/patched-model
+```
+
+Use that directory with your compatible inference runtime. Keep the original checkpoint; the patch can
+also be undone with `dawe patch restore`.
+
+DAWE is experimental. It accepts different data sources through the agent, but a successful small edit
+is not guaranteed for every failure. The worked experiment below repaired structural output failures;
+it does not establish general reasoning or knowledge repair.
+
+[Full user guide](docs/USAGE.md) · [The skill](skills/dawe/SKILL.md) · [No-GPU example](examples/dawe/README.md)
+
+## Install the skill elsewhere
+
+You can also copy the bundled skill into your agent's configured skills directory:
+
+```bash
+uv run dawe skill install --dest /path/to/your/skills
+```
+
+For explicit local preparation, use `dawe workbench init` and `dawe workbench freeze`; the agent can run
+these for you. Preparation starts no compute. Keep private data, runs, and checkpoints out of Git.
 
 ## The result in one table
 
@@ -65,10 +95,10 @@ Single run, 204 items (about ±5 points), our own scorer rather than BFCL's, no 
 ```bash
 uv sync --extra dev
 uv run pytest -q
-uv run geodesic fetch                  # BFCL v3 simple/multiple/parallel, pinned revision, SHA-256 checked
-uv run geodesic splits                 # the 595/204 split matches splits/bfcl_v3_split.json
-uv run geodesic roundtrip              # correct answers survive every harness
-uv run geodesic harnesses              # the 12 harness versions
+uv run dawe fetch                  # BFCL v3 simple/multiple/parallel, pinned revision, SHA-256 checked
+uv run dawe splits                 # the 595/204 split matches splits/bfcl_v3_split.json
+uv run dawe roundtrip              # correct answers survive every harness
+uv run dawe harnesses              # the 12 harness versions
 uv run python examples/patch_lifecycle.py
 ```
 
@@ -78,9 +108,9 @@ A patch is sparse (changed indices and values: tens of KB, not the GB-sized tens
 was made for by content hash, refuses any other, writes a new directory, and can be undone byte for byte:
 
 ```bash
-geodesic patch inspect x.gpatch
-geodesic patch apply   x.gpatch --source CHECKPOINT --out NEW_DIR
-geodesic patch restore x.gpatch --patched NEW_DIR   --out ORIGINAL_DIR
+dawe patch inspect x.gpatch
+dawe patch apply   x.gpatch --source CHECKPOINT --out NEW_DIR
+dawe patch restore x.gpatch --patched NEW_DIR   --out ORIGINAL_DIR
 ```
 
 Standard library only; the patch tools do not import torch. The two released patches (23.6 KB and 43.7 KB) are in
@@ -90,7 +120,7 @@ to is not published (see [docs/LICENSES.md](docs/LICENSES.md)).
 ## Layout
 
 ```
-geodesic/        harnesses, BFCL loader and scorer, dataset builders, map reader, splits, pins, patch format
+dawe/        harnesses, BFCL loader and scorer, dataset builders, map reader, splits, pins, patch format
 harnesses/       v1 ... v12 as TOML (v1 is the baseline; each change is one or two fields)
 splits/          the train/test split as a file
 gpu/             Modal jobs: SFT, generation, maps (app.py); the agent lab (lab.py)
@@ -131,12 +161,12 @@ agents saw; test = held-out items under every harness.
 ## Commands
 
 ```
-geodesic fetch | splits [--write] | harnesses | render <harness> <id> | roundtrip
-geodesic build-sft [--harness H] | build-eval | build-pairs A B | map-summary MAP.json | report | score preds.jsonl
-geodesic patch create | from-dense | inspect | apply | restore | verify
-geodesic skill path | install --dest DIR
-geodesic workbench init --source DATA --model CHECKPOINT --out RUN
-geodesic workbench freeze EXAMPLES --development-dir EDIT --evaluation-dir EVAL
+dawe fetch | splits [--write] | harnesses | render <harness> <id> | roundtrip
+dawe build-sft [--harness H] | build-eval | build-pairs A B | map-summary MAP.json | report | score preds.jsonl
+dawe patch create | from-dense | inspect | apply | restore | verify
+dawe skill path | install --dest DIR
+dawe workbench init --source DATA --model CHECKPOINT --out RUN
+dawe workbench freeze EXAMPLES --development-dir EDIT --evaluation-dir EVAL
 ```
 
 ## Credits

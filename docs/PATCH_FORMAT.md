@@ -2,7 +2,7 @@
 
 A patch is the list of weights that changed between two checkpoints, plus enough identity information to
 refuse any other checkpoint. It is a valid [safetensors](https://github.com/huggingface/safetensors) file, so
-any safetensors reader can open it, and `geodesic.patch` reads and writes it with the Python standard
+any safetensors reader can open it, and `dawe.patch` reads and writes it with the Python standard
 library only (no torch, no numpy).
 
 ## Why sparse, and how small
@@ -38,6 +38,8 @@ Tensors (names are literal strings):
 `<tensor>` is the tensor's key in the checkpoint's safetensors files. Values are raw little-endian bytes and are
 compared bit for bit, so NaNs and signed zeros round-trip exactly.
 
+The v1 wire format retains its original `geodesic_patch` metadata key and `geodesic-patch` format name so released artifacts remain compatible after the DAWE rename. These are serialization identifiers, not the package or CLI name.
+
 Metadata key `geodesic_patch` holds a JSON manifest:
 
 | Field | Meaning |
@@ -72,14 +74,14 @@ them apart. The test suite includes exactly this case.
 
 ```bash
 # create
-geodesic patch create     --source CKPT --edited CKPT -o x.gpatch --lineage-file release/lineage_sft_v1.json
-geodesic patch from-dense --source CKPT --dense old_patch.safetensors -o x.gpatch --expect-changed 2557
+dawe patch create     --source CKPT --edited CKPT -o x.gpatch --lineage-file release/lineage_sft_v1.json
+dawe patch from-dense --source CKPT --dense old_patch.safetensors -o x.gpatch --expect-changed 2557
 # look
-geodesic patch inspect x.gpatch                # tensors, rows touched, identities, lineage
-geodesic patch verify  x.gpatch DIR --expect source|result
+dawe patch inspect x.gpatch                # tensors, rows touched, identities, lineage
+dawe patch verify  x.gpatch DIR --expect source|result
 # use
-geodesic patch apply   x.gpatch --source CKPT --out NEW_DIR
-geodesic patch restore x.gpatch --patched NEW_DIR --out ORIGINAL_DIR
+dawe patch apply   x.gpatch --source CKPT --out NEW_DIR
+dawe patch restore x.gpatch --patched NEW_DIR --out ORIGINAL_DIR
 ```
 
 **apply** checks, in order: tensor names/dtypes/shapes; config and tokenizer hashes; each patched tensor's shape,
@@ -110,7 +112,7 @@ uses the disk space of the model; the patched shard is always a fresh copy).
 ## Python
 
 ```python
-from geodesic import patch
+from dawe import patch
 p = patch.load_patch("x.gpatch")
 print(patch.format_description(patch.describe(p)))
 patch.apply_patch("x.gpatch", "sft_v1/merged", "sft_v1_xml", full=True)

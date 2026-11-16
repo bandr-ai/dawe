@@ -9,6 +9,6 @@ jobs:
       - run: uv sync --extra dev
       - run: uv run pytest -q
       # data-dependent checks: pinned dataset revision, split manifest, every gold answer survives every harness
-      - run: uv run geodesic fetch
-      - run: uv run geodesic splits
-      - run: uv run geodesic roundtrip
+      - run: uv run dawe fetch
+      - run: uv run dawe splits
+      - run: uv run dawe roundtrip

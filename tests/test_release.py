@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from geodesic import bfcl, pins, splits
+from dawe import bfcl, pins, splits
 
 ROOT = Path(__file__).resolve().parent.parent
-needs_data = pytest.mark.skipif(bool(bfcl.verify_data()), reason="run `geodesic fetch` first")
+needs_data = pytest.mark.skipif(bool(bfcl.verify_data()), reason="run `dawe fetch` first")
 
 
 def test_split_rule_is_the_documented_one():
@@ -51,7 +51,7 @@ def test_pin_tables_in_docs_agree():
 
 
 def test_released_patches_match_their_checksums_and_notes():
-    from geodesic import patch as gp
+    from dawe import patch as gp
 
     d = ROOT / "release" / "patches"
     for line in (d / "SHA256SUMS").read_text().splitlines():
