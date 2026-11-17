@@ -392,3 +392,27 @@ def test_cli_from_dense_expect_changed(tmp_path, src, edited):
     assert not out.exists()
     n = len(gp.diff_regions(gp.Checkpoint(src).span(EMBED), ck.span(EMBED), 2))
     assert gp.main(["from-dense", "--source", str(src), "--dense", str(dense), "-o", str(out), "--expect-changed", str(n)]) == 0
+
+
+def test_fast_mode_does_not_claim_an_unmeasured_fingerprint(tmp_path, src, patch_file):
+    out = tmp_path / "fast"
+    report = gp.apply_patch(patch_file, src, out, full=False)
+    assert report["fingerprint_verified"] is False and report["output_fingerprint"] is None
+    marker = json.loads((out / gp.PROVENANCE_FILE).read_text())
+    assert marker["fingerprint_verified"] is False and marker["output_fingerprint"] is None
+    full = gp.apply_patch(patch_file, src, tmp_path / "full")
+    assert full["fingerprint_verified"] is True and full["output_fingerprint"]
+
+
+def test_verify_fast_warns(patch_file, src, capsys):
+    assert gp.main(["verify", str(patch_file), str(src), "--fast"]) == 0
+    assert "--fast does not hash untouched tensors" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("argv", [["inspect", "{missing}"], ["apply", "{missing}", "--source", "{missing}", "--out", "{out}"],
+                                  ["verify", "{missing}", "{missing}"],
+                                  ["from-dense", "--source", "{missing}", "--dense", "{missing}", "-o", "{out}"]])
+def test_missing_files_are_errors_not_tracebacks(tmp_path, capsys, argv):
+    fill = {"{missing}": str(tmp_path / "nope"), "{out}": str(tmp_path / "out")}
+    assert gp.main([fill.get(a, a) for a in argv]) == 1
+    assert capsys.readouterr().err.startswith("error:")

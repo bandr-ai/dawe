@@ -703,10 +703,13 @@ def _transform(patch: Patch, src_root: Path, out_root: Path, direction: str, *, 
             got = sha256_range(tmp / sh.path.relative_to(ck.root), base, base + (info.end - info.start))
             if got != want_after(e):
                 raise PatchError(f"{e.name}: written tensor does not match the expected {after} hash (bug or disk error)")
-        fp = _expected(patch, after)[0]
+        # Only claim whole-checkpoint fingerprints that were actually checked: --fast hashes the patched
+        # tensors alone, so a look-alike checkpoint would be reported as the exact one.
+        fp = _expected(patch, after)[0] if full else None
         (tmp / PROVENANCE_FILE).write_text(json.dumps({
             "tool": f"{FORMAT}/{VERSION}", "operation": direction, "patch_name": patch.name, "patch_id": patch.patch_id,
-            "input_fingerprint": _expected(patch, side)[0], "output_fingerprint": fp,
+            "input_fingerprint": _expected(patch, side)[0] if full else None, "output_fingerprint": fp,
+            "fingerprint_verified": full,
         }, indent=1) + "\n")
         if out_root.exists():
             out_root.rmdir()
@@ -715,7 +718,7 @@ def _transform(patch: Patch, src_root: Path, out_root: Path, direction: str, *, 
         shutil.rmtree(tmp, ignore_errors=True)
         raise
     return {"operation": direction, "out": str(out_root), "changed_weights": patch.changed(), "tensors": [e.name for e in patch.edits],
-            "output_fingerprint": fp, "checked": "full" if full else "fast"}
+            "output_fingerprint": fp, "fingerprint_verified": full, "checked": "full" if full else "fast"}
 
 
 def apply_patch(patch_path: Path | str, source: Path | str, out: Path | str, *, full: bool = True, link: str = "copy", log: Log | None = None) -> dict:
@@ -839,11 +842,13 @@ def main(argv: list[str] | None = None) -> int:
                              checked=r["checked"], link=a.link)
             print(json.dumps(r, indent=1))
         elif a.cmd == "verify":
+            if a.fast:
+                _log("warning: --fast does not hash untouched tensors; a pass does not prove this is the exact checkpoint (a look-alike that agrees on config, tokenizer, shapes and the patched tensors also passes)")
             problems = verify_checkpoint(a.patch, a.dir, a.expect, full=not a.fast, log=_log)
             telemetry.record(expect=a.expect, checked="fast" if a.fast else "full", verified=not problems)
             print(f"{a.dir} is the patch's {a.expect} checkpoint" if not problems else "\n".join(problems))
             return 1 if problems else 0
-    except PatchError as e:
+    except (PatchError, OSError, json.JSONDecodeError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
     return 0

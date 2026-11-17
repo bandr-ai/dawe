@@ -92,9 +92,12 @@ into place), re-hashes each patched tensor in the output, and writes `geodesic_a
 patch produced it. The input directory is never modified; `NEW_DIR` may not be the input or inside it.
 
 **restore** is the same operation backwards: it requires the input to match the patch's *result* exactly and
-writes the original values. The result is byte-identical to the original checkpoint (tested).
+writes the original values. Every weight, config and tokenizer file is byte-identical to the original
+checkpoint (tested); the directory also carries `geodesic_applied.json`, which `verify` ignores.
 
-Options: `--fast` skips hashing untouched tensors (it prints a warning; see the weakness above).
+Options: `--fast` skips hashing untouched tensors (it prints a warning, also for `verify`; see the weakness above).
+In `--fast` mode the report and `geodesic_applied.json` carry `fingerprint_verified: false` and no
+`output_fingerprint`, because the whole-checkpoint fingerprint was not measured.
 `--link copy|hardlink|symlink` chooses how untouched files reach `NEW_DIR` (default `copy`: independent, but
 uses the disk space of the model; the patched shard is always a fresh copy).
 
