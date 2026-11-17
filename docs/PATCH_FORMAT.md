@@ -95,6 +95,9 @@ patch produced it. The input directory is never modified; `NEW_DIR` may not be t
 writes the original values. Every weight, config and tokenizer file is byte-identical to the original
 checkpoint (tested); the directory also carries `geodesic_applied.json`, which `verify` ignores.
 
+**create** and **from-dense** never overwrite an existing output file: they write `fix2.gpatch`, `fix3.gpatch`, ...
+next to it, say so on stderr, and print `wrote <path>`. `--force` replaces the file instead.
+
 Options: `--fast` skips hashing untouched tensors (it prints a warning, also for `verify`; see the weakness above).
 In `--fast` mode the report and `geodesic_applied.json` carry `fingerprint_verified: false` and no
 `output_fingerprint`, because the whole-checkpoint fingerprint was not measured.

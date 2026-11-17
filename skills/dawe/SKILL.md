@@ -67,6 +67,8 @@ dawe patch apply candidate.gpatch --source CHECKPOINT --out PATCHED_CHECKPOINT
 dawe patch restore candidate.gpatch --patched PATCHED_CHECKPOINT --out RESTORED_CHECKPOINT
 ```
 
+`patch create` and `patch from-dense` never overwrite: if `candidate.gpatch` exists they write `candidate2.gpatch` (then `candidate3.gpatch`, ...) and print `wrote <path>`. Use the printed path in later commands, or pass `--force` to replace the file on purpose.
+
 `changed-tensors.safetensors` contains the NEW complete changed tensors, not deltas. Use full checkpoint identity checks; do not bypass them with `--fast`. Check apply/restore, unchanged tensors, and restored checkpoint identity. Reload the applied checkpoint in the intended compatible inference runtime before scoring it. Check actual tied-weight behavior after reload. Report unsupported layouts or runtime conversions rather than silently changing the source model.
 
 Evaluate repair and preservation separately, with identical baseline/patched settings, item IDs, valid counts, format/task metrics, regressions, and remaining failures. Paired per-item outcomes matter even when aggregate accuracy is unchanged. Use extra repetitions or uncertainty estimates when sampling or small score differences affect the conclusion, within the budget. If you inspect evaluation failures and revise the edit, that set becomes development; obtain fresh evaluation data or disclose the exposure.
