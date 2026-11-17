@@ -137,3 +137,16 @@ def test_probe_causal_positions_and_alignment():
         probe.decision_indices(offsets, prompt, reply, rendered, [{"prefix": "<c", "kind": "middle"}])
     with pytest.raises(ValueError, match="Chat template"):
         probe.decision_indices(offsets, prompt, reply, "different template", [{"prefix": "", "kind": "start"}])
+
+
+@pytest.mark.parametrize("argv", [["render", "nope", "simple_0"], ["build-pairs", "v1", "nope"], ["score", "missing.jsonl"]])
+def test_bad_cli_arguments_exit_with_an_error_message(argv, capsys, tmp_path):
+    argv = [str(tmp_path / a) if a == "missing.jsonl" else a for a in argv]
+    try:
+        code = main(argv)
+    except SystemExit as exc:  # clean messages exit this way
+        code = exc.code
+    except FileNotFoundError:
+        pytest.skip("BFCL data not fetched")
+    assert code not in (0, None)
+    assert "Traceback" not in capsys.readouterr().err

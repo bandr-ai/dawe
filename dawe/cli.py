@@ -42,6 +42,20 @@ def _roundtrip(h: Harness, items: list[bfcl.Item]) -> tuple[int, list[str]]:
     return ok, bad
 
 
+def _load_harness(name: str) -> Harness:
+    try:
+        return Harness.load(name)
+    except FileNotFoundError:
+        raise SystemExit(f"error: unknown harness {name!r}; available: {', '.join(available())}") from None
+
+
+def _read_preds(path: Path) -> list[dict]:
+    try:
+        return read_jsonl(path)
+    except OSError as exc:
+        raise SystemExit(f"error: {exc}") from None
+
+
 def format_table(title: str, rows: dict[str, dict[str, float | None]], hs: list[str]) -> list[str]:
     """Accuracy table: one row per model, one column per harness (None -> not run)."""
     w = max(len(h) for h in hs) + 1
@@ -88,6 +102,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("skill", help="path | install --dest DIR: bundled DAWE skill")
     sub.add_parser("workbench", help="init | freeze: prepare a DAWE run with your data")
+    sub.add_parser("patch", help="create | from-dense | inspect | apply | restore | verify: sparse weight patches")
     sub.add_parser("telemetry", help="status | on | off | location on|off: anonymous usage telemetry")
     sub.add_parser("fetch")
     sp = sub.add_parser("splits")
@@ -140,12 +155,15 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "build-sft":
         train = [i for i in items if i.split == "train"]
         out = a.out or Path(f"data/sft/{a.harness}_bfcl_train.jsonl")
-        write_jsonl(out, sft_rows(train, Harness.load(a.harness)))
+        write_jsonl(out, sft_rows(train, _load_harness(a.harness)))
         print(f"{out}  ({len(train)} rows)")
         return 0
     if a.cmd == "render":
-        it = next(i for i in items if i.id == a.item_id)
-        h = Harness.load(a.harness)
+        it = next((i for i in items if i.id == a.item_id), None)
+        if it is None:
+            print(f"error: unknown item id {a.item_id!r}", file=sys.stderr)
+            return 1
+        h = _load_harness(a.harness)
         msgs, _ = render(h, it)
         for m in msgs:
             print(f"--- {m['role']}\n{m['content']}")
@@ -156,12 +174,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{len(items)} items, split {dict(counts)}, skipped {bfcl.SKIPPED}")
         failed = False
         for n in a.harness or available():
-            ok, bad = _roundtrip(Harness.load(n), items)
+            ok, bad = _roundtrip(_load_harness(n), items)
             print(f"{n:12} {ok}/{len(items)}" + (f"  failed: {bad[:5]}" if bad else ""))
             failed |= bool(bad)
         return 1 if failed else 0
     if a.cmd == "build-eval":
-        hs = [Harness.load(n) for n in (a.harness or available())]
+        hs = [_load_harness(n) for n in (a.harness or available())]
         test = [i for i in items if i.split == "test"]
         rows = eval_rows(test, hs)
         write_jsonl(a.out, rows)
@@ -170,14 +188,14 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "build-pairs":
         train = [i for i in items if i.split == "train"]
         out = Path(f"data/pairs/{a.a}__{a.b}.jsonl")
-        write_jsonl(out, pair_rows(train, Harness.load(a.a), Harness.load(a.b)))
+        write_jsonl(out, pair_rows(train, _load_harness(a.a), _load_harness(a.b)))
         print(f"{out}  ({len(train)} pairs)")
         return 0
     if a.cmd == "report":
         print(report(items))
         return 0
     if a.cmd == "score":
-        print(json.dumps(score(read_jsonl(a.preds), items), indent=2))
+        print(json.dumps(score(_read_preds(a.preds), items), indent=2))
         return 0
     return 2
 
