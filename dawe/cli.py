@@ -144,7 +144,11 @@ def main(argv: list[str] | None = None) -> int:
         for n in available():
             print(f"{n:12} {Harness.load(n).description}")
         return 0
-    items = bfcl.load_all()
+    try:
+        items = bfcl.load_all()
+    except FileNotFoundError as exc:
+        print(f"error: {exc}\nThe BFCL data is not downloaded yet; run `dawe fetch` first.", file=sys.stderr)
+        return 1
     if a.cmd == "splits":
         if a.write:
             print(splits.write(items))

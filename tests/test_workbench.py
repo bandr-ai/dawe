@@ -150,3 +150,12 @@ def test_bad_cli_arguments_exit_with_an_error_message(argv, capsys, tmp_path):
         pytest.skip("BFCL data not fetched")
     assert code not in (0, None)
     assert "Traceback" not in capsys.readouterr().err
+
+
+def test_dataset_commands_explain_missing_data(tmp_path, monkeypatch, capsys):
+    from dawe import bfcl
+    monkeypatch.setattr(bfcl, "load_all", lambda: (_ for _ in ()).throw(FileNotFoundError("data/bfcl/x.json")))
+    assert main(["harnesses"]) == 0  # needs no dataset
+    assert main(["render", "v1", "simple_0"]) == 1
+    err = capsys.readouterr().err
+    assert "dawe fetch" in err and "Traceback" not in err
