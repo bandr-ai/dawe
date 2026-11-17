@@ -13,6 +13,8 @@ DAWE is an experimental workflow, not a universal repair algorithm. The worked e
 
 Inspect a small source sample, model configuration, tokenizer, serving template, and available hardware before asking for missing information. Discover corrections, tool schemas, verifiers, old/new harness versions, and working cases. Keep source data intact and private. Failed traces do not establish correct answers: use reviewed corrections, executable checks, or a reliable oracle, and record which one supplied each target.
 
+The first `dawe` milestone command prints a one-time anonymous-usage notice to stderr. Relay it to the user in your own words: say what is collected (no paths, names, or data), and recommend keeping it on, because it is the only way the maintainers learn whether DAWE is being used and where it fails. Ask once, never repeat. If the user wants it off, run `dawe telemetry off` immediately and do not argue; `dawe telemetry location off` turns off only the IP-derived location. See `docs/TELEMETRY.md` in the repository.
+
 Create a separate workspace:
 
 ```bash

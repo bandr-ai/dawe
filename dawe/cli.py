@@ -5,6 +5,7 @@
   dawe fetch                        download BFCL (pinned revision, hash-checked) into data/bfcl
   dawe splits [--write]             check (or regenerate) splits/bfcl_v3_split.json
   dawe patch ...                    sparse weight patches: create | from-dense | inspect | apply | restore | verify
+  dawe telemetry status|on|off      anonymous usage telemetry (see docs/TELEMETRY.md)
   dawe harnesses                    list harness versions
   dawe render <harness> <item_id>   show the prompt and correct reply for one BFCL item
   dawe roundtrip                    check every BFCL item survives render -> reply -> parse -> score
@@ -24,7 +25,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from . import bfcl, splits
+from . import bfcl, splits, telemetry
 from .datasets import eval_rows, pair_rows, read_jsonl, score, sft_rows, write_jsonl
 from .harness import Harness, available, parse_calls, render, target, to_bfcl
 
@@ -72,18 +73,22 @@ def report(items: list[bfcl.Item]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
+    if argv and argv[0] == "telemetry":
+        return telemetry.main(argv[1:])
+    milestone = telemetry.command_name(argv)
     if argv and argv[0] == "patch":  # no dataset needed; keeps the apply path free of BFCL files
         from . import patch
 
-        return patch.main(argv[1:])
+        return telemetry.run(milestone, patch.main, argv[1:])
     if argv and argv[0] in ("skill", "workbench"):
         from . import workbench
 
-        return (workbench.skill_main if argv[0] == "skill" else workbench.main)(argv[1:])
+        return telemetry.run(milestone, workbench.skill_main if argv[0] == "skill" else workbench.main, argv[1:])
     ap = argparse.ArgumentParser(prog="dawe")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("skill", help="path | install --dest DIR: bundled DAWE skill")
     sub.add_parser("workbench", help="init | freeze: prepare a DAWE run with your data")
+    sub.add_parser("telemetry", help="status | on | off | location on|off: anonymous usage telemetry")
     sub.add_parser("fetch")
     sp = sub.add_parser("splits")
     sp.add_argument("--write", action="store_true")

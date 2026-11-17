@@ -63,6 +63,8 @@ uv run dawe skill install --dest /absolute/path/to/your/skills
 
 This creates `your/skills/dawe/` and refuses to overwrite an existing copy. Agent discovery depends on your agent's skills configuration.
 
+DAWE sends anonymous command-level usage by default; `uv run dawe telemetry status` shows the state, and `dawe telemetry off` disables it ([details](TELEMETRY.md)).
+
 ## 3. What happens during the run
 
 1. **Inspect and prepare.** The agent inventories your source, targets, checkpoint and serving setup; writes a normalizer and scorer; and records acceptance criteria, compute limits and reserved final-evaluation budget in `PLAN.md`. It checks the scorer against correct, wrong, malformed and truncated outputs.

@@ -11,6 +11,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from . import telemetry
 
 SKILL = Path(__file__).resolve().parent / "_skills" / "dawe"
 if not SKILL.exists():
@@ -218,8 +219,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "init":
             print(init_workspace(args.source, args.model, args.out, max_tries=args.max_tries, budget_usd=args.budget_usd))
+            telemetry.record(budget_set=args.budget_usd is not None, max_tries=telemetry.bucket(args.max_tries))
         else:
             result = freeze_examples(args.examples, args.development_dir, args.evaluation_dir, args.evaluation_fraction)
+            dev, ev = result["development"], result["evaluation"]
+            telemetry.record(
+                dev_examples=telemetry.bucket(dev["count"]), eval_examples=telemetry.bucket(ev["count"]),
+                **{p: telemetry.bucket(dev["by_purpose"][p] + ev["by_purpose"][p]) for p in ("repair", "preserve")})
             print(json.dumps(result, indent=2))
     except (ValueError, OSError) as exc:
         print(str(exc), file=sys.stderr)

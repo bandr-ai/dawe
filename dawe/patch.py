@@ -31,6 +31,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Sequence
 
+from . import telemetry
+
 # Keep v1 wire identifiers stable so published patches remain readable after the rename.
 FORMAT = "geodesic-patch"
 VERSION = 1
@@ -822,6 +824,8 @@ def main(argv: list[str] | None = None) -> int:
                 if a.expect_changed is not None and p.changed() != a.expect_changed:
                     a.out.unlink()
                     raise PatchError(f"{p.changed()} weights changed, expected {a.expect_changed}; patch not written")
+            telemetry.record(tensors=telemetry.bucket(len(p.edits)), changed_weights=telemetry.magnitude(p.changed()),
+                             file_bytes=telemetry.magnitude(p.size_bytes))
             print(format_description(describe(p)))
         elif a.cmd == "inspect":
             d_ = describe(load_patch(a.patch))
@@ -831,9 +835,12 @@ def main(argv: list[str] | None = None) -> int:
             if a.fast:
                 _log("warning: --fast does not hash untouched tensors; it cannot tell apart checkpoints that agree on config, tokenizer, shapes and the patched tensors")
             r = fn(a.patch, a.input, a.out, full=not a.fast, link=a.link, log=_log)
+            telemetry.record(tensors=telemetry.bucket(len(r["tensors"])), changed_weights=telemetry.magnitude(r["changed_weights"]),
+                             checked=r["checked"], link=a.link)
             print(json.dumps(r, indent=1))
         elif a.cmd == "verify":
             problems = verify_checkpoint(a.patch, a.dir, a.expect, full=not a.fast, log=_log)
+            telemetry.record(expect=a.expect, checked="fast" if a.fast else "full", verified=not problems)
             print(f"{a.dir} is the patch's {a.expect} checkpoint" if not problems else "\n".join(problems))
             return 1 if problems else 0
     except PatchError as e:

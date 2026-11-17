@@ -145,6 +145,10 @@ trustworthy targets, include behavior to preserve, and report per-item baseline/
 when no edit works. Share only data and weights you have permission to publish. The [experiment details](docs/EXPERIMENT.md#not-yet-done)
 lists the missing research controls; the [user guide](docs/USAGE.md) explains the run artifacts.
 
+## Telemetry
+
+DAWE sends anonymous command-level usage (no paths, model names, or data). Please keep it on; it is how we learn whether DAWE is being used. If you must, disable it with `uv run dawe telemetry off` or `DAWE_TELEMETRY_DISABLED=1`; see [docs/TELEMETRY.md](docs/TELEMETRY.md).
+
 ## Credits
 
 Data: Yan, Mao, Ji, Zhang, Patil, Stoica, Gonzalez, *Berkeley Function Calling Leaderboard* (2024), Apache-2.0.
