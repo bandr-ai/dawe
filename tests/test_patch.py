@@ -418,28 +418,26 @@ def test_missing_files_are_errors_not_tracebacks(tmp_path, capsys, argv):
     assert capsys.readouterr().err.startswith("error:")
 
 
-def test_create_never_overwrites_without_force(tmp_path, src, edited, capsys):
+def test_create_refuses_to_overwrite_without_force(tmp_path, src, edited, capsys):
     out = tmp_path / "fix.gpatch"
     argv = ["create", "--source", str(src), "--edited", str(edited), "-o", str(out)]
     assert gp.main(argv) == 0
     first = out.read_bytes()
-    assert gp.main(argv) == 0
-    second = tmp_path / "fix2.gpatch"
-    assert second.exists() and out.read_bytes() == first
-    cap = capsys.readouterr()
-    assert "fix.gpatch already exists; writing" in cap.err and f"wrote {second}" in cap.out
-    assert gp.main(argv) == 0 and (tmp_path / "fix3.gpatch").exists()
-    assert gp.load_patch(second).name == "fix2"
+    capsys.readouterr()
+    assert gp.main(argv) == 1
+    assert "already exists; nothing was written" in capsys.readouterr().err
+    assert out.read_bytes() == first
+    assert sorted(p.name for p in tmp_path.glob("*.gpatch")) == ["fix.gpatch"]  # no numbered sibling
 
 
 def test_force_replaces_the_existing_file(tmp_path, src, edited):
     out = tmp_path / "fix.gpatch"
     out.write_bytes(b"old")
     assert gp.main(["create", "--source", str(src), "--edited", str(edited), "-o", str(out), "--force"]) == 0
-    assert out.read_bytes() != b"old" and not (tmp_path / "fix2.gpatch").exists()
+    assert out.read_bytes() != b"old" and sorted(p.name for p in tmp_path.glob("*.gpatch")) == ["fix.gpatch"]
 
 
-def test_from_dense_expect_changed_failure_leaves_existing_file_alone(tmp_path, src, edited):
+def test_from_dense_refuses_existing_file_and_expect_changed_failure_leaves_it_alone(tmp_path, src, edited):
     ck = gp.Checkpoint(edited)
     path, s, e = ck.span(EMBED)
     dense = tmp_path / "d.safetensors"
@@ -447,4 +445,6 @@ def test_from_dense_expect_changed_failure_leaves_existing_file_alone(tmp_path, 
     out = tmp_path / "x.gpatch"
     out.write_bytes(b"precious")
     assert gp.main(["from-dense", "--source", str(src), "--dense", str(dense), "-o", str(out), "--expect-changed", "1"]) == 1
-    assert out.read_bytes() == b"precious" and not (tmp_path / "x2.gpatch").exists()
+    assert out.read_bytes() == b"precious"
+    assert gp.main(["from-dense", "--source", str(src), "--dense", str(dense), "-o", str(out)]) == 1
+    assert out.read_bytes() == b"precious"

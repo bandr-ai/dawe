@@ -67,7 +67,7 @@ dawe patch apply candidate.gpatch --source CHECKPOINT --out PATCHED_CHECKPOINT
 dawe patch restore candidate.gpatch --patched PATCHED_CHECKPOINT --out RESTORED_CHECKPOINT
 ```
 
-`patch create` and `patch from-dense` never overwrite: if `candidate.gpatch` exists they write `candidate2.gpatch` (then `candidate3.gpatch`, ...) and print `wrote <path>`. Use the printed path in later commands, or pass `--force` to replace the file on purpose.
+`patch create` and `patch from-dense` refuse to overwrite: if `candidate.gpatch` exists they exit with an error and write nothing. Choose a new `-o` name for each candidate (for example `candidate-2.gpatch`) and use that same name in every later command, or pass `--force` to replace the file on purpose.
 
 `changed-tensors.safetensors` contains the NEW complete changed tensors, not deltas. Use full checkpoint identity checks; do not bypass them with `--fast`. Check apply/restore, unchanged tensors, and restored checkpoint identity. Reload the applied checkpoint in the intended compatible inference runtime before scoring it. Check actual tied-weight behavior after reload. Report unsupported layouts or runtime conversions rather than silently changing the source model.
 

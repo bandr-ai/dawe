@@ -776,16 +776,6 @@ def _log(msg: str) -> None:
     print(msg, file=sys.stderr, flush=True)
 
 
-def _free_path(path: Path) -> Path:
-    """`fix.gpatch` -> `fix2.gpatch`, `fix3.gpatch`, ... the first name that is not taken."""
-    n = 2
-    while True:
-        candidate = path.with_name(f"{path.stem}{n}{path.suffix}")
-        if not candidate.exists():
-            return candidate
-        n += 1
-
-
 def _lineage(a: argparse.Namespace) -> dict | None:
     return json.loads(Path(a.lineage_file).read_text()) if a.lineage_file else None
 
@@ -801,7 +791,7 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--description", default="")
         p.add_argument("--lineage-file", type=Path, help="JSON describing how the source checkpoint was made")
         p.add_argument("--max-changed-fraction", type=float, default=0.25)
-        p.add_argument("--force", action="store_true", help="replace the output file if it exists (default: write a numbered sibling such as fix2.gpatch)")
+        p.add_argument("--force", action="store_true", help="replace the output file if it exists (default: refuse)")
 
     c = sub.add_parser("create", help="diff two checkpoint directories")
     common_create(c)
@@ -830,8 +820,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if a.cmd in ("create", "from-dense"):
             if a.out.exists() and not a.force:
-                taken, a.out = a.out, _free_path(a.out)
-                _log(f"{taken} already exists; writing {a.out} instead (use --force to replace it)")
+                raise PatchError(f"{a.out} already exists; nothing was written. Choose a different -o path, or pass --force to replace it")
             kw = dict(name=a.name or a.out.stem, description=a.description, lineage=_lineage(a),
                       max_changed_fraction=a.max_changed_fraction, log=_log)
             if a.cmd == "create":
@@ -841,7 +830,6 @@ def main(argv: list[str] | None = None) -> int:
                 if a.expect_changed is not None and p.changed() != a.expect_changed:
                     a.out.unlink()
                     raise PatchError(f"{p.changed()} weights changed, expected {a.expect_changed}; patch not written")
-            print(f"wrote {a.out}")
             telemetry.record(tensors=telemetry.bucket(len(p.edits)), changed_weights=telemetry.magnitude(p.changed()),
                              file_bytes=telemetry.magnitude(p.size_bytes))
             print(format_description(describe(p)))
