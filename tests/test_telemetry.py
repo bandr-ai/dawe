@@ -33,6 +33,9 @@ def init_args(tmp_path, name="run", *extra):
 
 
 def test_off_under_pytest_by_default(tmp_path, monkeypatch):
+    # CI systems set CI, which is checked before pytest; clear the other guards so this isolates pytest.
+    for var in ("CI", "DO_NOT_TRACK", "DAWE_TELEMETRY_DISABLED", "DAWE_POSTHOG_API_KEY", "POSTHOG_PROJECT_TOKEN"):
+        monkeypatch.delenv(var, raising=False)
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
     assert telemetry.gate() == (False, "pytest")
 
