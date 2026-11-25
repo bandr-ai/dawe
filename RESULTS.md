@@ -1,5 +1,7 @@
 # Results
 
+See the [Qwen3.8-27B results](docs/QWEN27B_RESULTS.md) for the BFCL v4 Multi-Turn Python harness experiment. The results below are for Qwen3.5-4B.
+
 Held-out BFCL test split (204 items; 48 parallel), scored with our own matcher (`dawe/bfcl.py`), not BFCL's official evaluator. Greedy decoding, thinking off. One run each.
 
 "Held-out" means the agents never saw test items or per-item predictions. The agent briefs did quote aggregate test numbers; see [docs/LAB.md](docs/LAB.md#what-the-agents-were-told-about-the-test-set). At n=204 the 95% interval on a single accuracy is about ±4 to 6 points. Read this with [docs/WRITEUP.md](docs/WRITEUP.md#limitations).

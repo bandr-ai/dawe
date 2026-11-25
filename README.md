@@ -79,6 +79,8 @@ these for you. Preparation starts no compute. Keep private data, runs, and check
 
 ## What we have demonstrated
 
+On Qwen3.8-27B, a closed-form edit to **5,104 weights** raised the Python tool-call score from **39–42 to 60 out of 164** held-out BFCL v4 Multi-Turn tasks. A prompt hint scored 51 and a rank-16 LoRA fit from the same source conversations scored 63. See the [27B results](docs/QWEN27B_RESULTS.md) for the controls, checks on other tool formats, and confidence intervals.
+
 Qwen3.5-4B, LoRA SFT on BFCL under harness `v1`; 204 held-out items, greedy, one run each
 ([RESULTS.md](RESULTS.md)):
 
